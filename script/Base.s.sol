@@ -38,4 +38,7 @@ abstract contract BaseScript is Script {
         _;
         vm.stopBroadcast();
     }
+
+    // add this to be excluded from coverage report
+    function test() public { }
 }

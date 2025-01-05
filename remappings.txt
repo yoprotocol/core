@@ -1,2 +1,3 @@
 @openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
+@solmate/=node_modules/solmate/src/
 forge-std/=node_modules/forge-std/

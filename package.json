@@ -7,7 +7,8 @@
     "url": "https://github.com/kraikov"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.1"
+    "@openzeppelin/contracts": "5.1.0",
+    "solmate": "transmissions11/solmate"
   },
   "devDependencies": {
     "forge-std": "github:foundry-rs/forge-std#v1.8.1",

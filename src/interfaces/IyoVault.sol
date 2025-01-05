@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.28;
+
+/// @title IyoVault
+/// @notice Interface for the YO vault part of the YO protocol
+interface IyoVault {
+    struct PendingRedeem {
+        uint256 shares;
+    }
+
+    struct ClaimableRedeem {
+        uint256 assets;
+        uint256 shares;
+    }
+
+    /// @notice Emitted when the fee is updated
+    /// @param lastFee The last fee
+    /// @param newFee The new fee
+    event FeeUpdated(uint256 lastFee, uint256 newFee);
+
+    /// @notice Emitted when the fee recipient is updated
+    /// @param lastFeeRecipient The last fee recipient
+    /// @param newFeeRecipient The new fee recipient
+    event FeeRecipientUpdated(address lastFeeRecipient, address newFeeRecipient);
+
+    /// @notice Emitted when the max percentage is updated
+    /// @param lastMaxPercentage The last max percentage
+    /// @param newMaxPercentage The new max percentage
+    event MaxPercentageUpdated(uint256 lastMaxPercentage, uint256 newMaxPercentage);
+
+    /// @notice Emitted when the underlying balance is updated by the oracle
+    /// @param lastUnderlyingBalance The last underlying balance
+    /// @param newUnderlyingBalance The new underlying balance
+    event UnderlyingBalanceUpdated(uint256 lastUnderlyingBalance, uint256 newUnderlyingBalance);
+
+    /// @notice Emitted when a new redeem request is created
+    /// @param controller The controller address
+    /// @param owner The owner address
+    /// @param requestId The request ID
+    /// @param sender The sender address
+    /// @param assets The assets amount
+    event RedeemRequest(
+        address indexed controller, address indexed owner, uint256 indexed requestId, address sender, uint256 assets
+    );
+
+    function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId);
+}
