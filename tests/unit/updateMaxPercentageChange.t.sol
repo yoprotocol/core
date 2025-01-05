@@ -5,8 +5,6 @@ import { Base_Test } from "../Base.t.sol";
 
 import { Errors } from "src/libraries/Errors.sol";
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 contract UpdateMaxPercentageChange_Unit_Concrete_Test is Base_Test {
     function setUp() public override {
         Base_Test.setUp();

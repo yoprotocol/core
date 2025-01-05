@@ -53,10 +53,10 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
     address public feeRecipient;
 
     /// @dev used to store the amount of shares that are pending redemption, it must be fulfilled by the vault operator
-    mapping(address user => PendingRedeem) internal _pendingRedeem;
+    mapping(address user => PendingRedeem redeem) internal _pendingRedeem;
     /// @dev used to store the amount of shares and assets that are claimable by the controller through withdraw or
     /// redeem
-    mapping(address user => ClaimableRedeem) internal _claimableRedeem;
+    mapping(address user => ClaimableRedeem claimable) internal _claimableRedeem;
 
     //============================== CONSTRUCTOR ===============================
 

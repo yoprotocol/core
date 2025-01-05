@@ -4,14 +4,13 @@ pragma solidity 0.8.28;
 import { Base_Test } from "../Base.t.sol";
 import { Errors } from "src/libraries/Errors.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Redeem_Unit_Concrete_Test is Base_Test {
     using Math for uint256;
 
-    uint256 fee = 1e16; // 1%
-    uint256 amount = 100 * 1e6;
-    uint256 aliceShares;
+    uint256 internal fee = 1e16; // 1%
+    uint256 internal amount = 100 * 1e6;
+    uint256 internal aliceShares;
 
     function setUp() public override {
         Base_Test.setUp();

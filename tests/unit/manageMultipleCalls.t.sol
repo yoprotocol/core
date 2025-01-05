@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Auth, Authority } from "@solmate/auth/Auth.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import { yoVault } from "src/yoVault.sol";
 import { Errors } from "src/libraries/Errors.sol";
 
 import { Base_Test } from "../Base.t.sol";

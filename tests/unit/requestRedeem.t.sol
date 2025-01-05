@@ -2,15 +2,10 @@
 pragma solidity 0.8.28;
 
 import { Base_Test } from "../Base.t.sol";
-import { yoVault } from "src/yoVault.sol";
-import { IyoVault } from "src/interfaces/IyoVault.sol";
 import { Errors } from "src/libraries/Errors.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import { MockAuthority } from "../mocks/MockAuthority.sol";
 
 contract RequestRedeem_Unit_Concrete_Test is Base_Test {
-    uint256 amount = 100 * 1e6;
+    uint256 internal amount = 100 * 1e6;
 
     function setUp() public override {
         Base_Test.setUp();

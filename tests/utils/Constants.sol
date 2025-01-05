@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.22;
+pragma solidity 0.8.28;
 
 abstract contract Constants {
     uint8 internal constant ADMIN_ROLE = 1;

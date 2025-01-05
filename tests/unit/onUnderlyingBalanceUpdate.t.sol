@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import { Base_Test } from "../Base.t.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract OnUnderlyingBalanceUpdate_Unit_Concrete_Test is Base_Test {
     using Math for uint256;
