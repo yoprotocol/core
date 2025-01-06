@@ -143,7 +143,15 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
     /// @param owner The address of the owner.
     /// @return requestId The ID of the request which is always 0 or the assets amount if the request is fulfilled
     /// immediately.
-    function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId) {
+    function requestRedeem(
+        uint256 shares,
+        address controller,
+        address owner
+    )
+        external
+        whenNotPaused
+        returns (uint256 requestId)
+    {
         require(shares > 0, Errors.SharesAmountZero());
         require(owner == msg.sender, Errors.NotSharesOwner());
         require(balanceOf(owner) >= shares, Errors.InsufficientShares());
