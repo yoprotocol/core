@@ -22,16 +22,29 @@ contract RequestRedeem_Unit_Concrete_Test is Base_Test {
 
         uint256 aliceAssets = usdc.balanceOf(users.alice);
 
+        uint256 pendingRedeemRequestBefore = depositVault.pendingRedeemRequest(users.alice);
+        (uint256 sharesBefore, uint256 assetsBefore) = depositVault.claimableRedeemRequest(users.alice);
+        uint256 totalClaimableAssets = depositVault.totalClaimableAssets();
+
         depositVault.requestRedeem(aliceShares, users.alice, users.alice);
+
+        uint256 pendingRedeemRequestAfter = depositVault.pendingRedeemRequest(users.alice);
+        (uint256 sharesAfter, uint256 assetsAfter) = depositVault.claimableRedeemRequest(users.alice);
+        uint256 totalClaimableAssetsAfter = depositVault.totalClaimableAssets();
+
+        assertEq(pendingRedeemRequestAfter, pendingRedeemRequestBefore, "Pending redeem should be the same");
+        assertEq(sharesAfter, sharesBefore + aliceShares, "Shares should be increased");
+        assertEq(assetsAfter, assetsBefore + amount, "Assets should be increased");
+        assertEq(totalClaimableAssetsAfter, totalClaimableAssets + amount, "Total claimable must be increased");
 
         uint256 aliceSharesAfter = depositVault.balanceOf(users.alice);
         assertEq(aliceSharesAfter, aliceShares - amount, "Alice Shares after is wrong");
 
         uint256 vaultAssetsAfter = usdc.balanceOf(address(depositVault));
-        assertEq(vaultAssetsAfter, vaultAssets - amount, "Vault assets after is wrong");
+        assertEq(vaultAssetsAfter, vaultAssets, "Vault assets after is wrong");
 
         uint256 aliceAssetsAfter = usdc.balanceOf(users.alice);
-        assertEq(aliceAssetsAfter, aliceAssets + amount, "Alice assets after is wrong");
+        assertEq(aliceAssetsAfter, aliceAssets, "Alice assets after is wrong");
     }
 
     function test_requestRedeem_async_success() public {
@@ -44,12 +57,15 @@ contract RequestRedeem_Unit_Concrete_Test is Base_Test {
         moveAssetsAndUpdateUnderlyingBalances(transferAmount);
         uint256 vaultAssets = usdc.balanceOf(address(depositVault));
         assertEq(vaultAssets, transferAmount, "Vault assets before is 0");
+        uint256 totalClaimableAssets = depositVault.totalClaimableAssets();
 
         depositVault.requestRedeem(aliceShares, users.alice, users.alice);
 
+        uint256 totalClaimableAssetsAfter = depositVault.totalClaimableAssets();
+        assertEq(totalClaimableAssetsAfter, totalClaimableAssets, "Total claimable assets should not be increased");
+
         uint256 aliceSharesAfter = depositVault.balanceOf(users.alice);
         assertEq(aliceSharesAfter, aliceShares - amount, "Alice Shares after is wrong");
-
         uint256 vaultAssetsAfter = usdc.balanceOf(address(depositVault));
         assertEq(vaultAssetsAfter, vaultAssets, "Vault assets after is wrong");
 
@@ -58,6 +74,27 @@ contract RequestRedeem_Unit_Concrete_Test is Base_Test {
 
         uint256 pendingShares = depositVault.pendingRedeemRequest(users.alice);
         assertEq(pendingShares, amount, "Pending shares is wrong");
+    }
+
+    function test_requestRedeem_async_total_claimable() public {
+        vm.startPrank({ msgSender: users.bob });
+        depositVault.deposit(amount, users.bob);
+        uint256 bobShares = depositVault.balanceOf(users.bob);
+
+        (uint256 shares, uint256 assets) = depositVault.claimableRedeemRequest(users.bob);
+        depositVault.requestRedeem(amount, users.bob, users.bob);
+        (uint256 sharesAfter, uint256 assetsAfter) = depositVault.claimableRedeemRequest(users.bob);
+        assertEq(sharesAfter, shares + bobShares, "Shares should be increased");
+        assertEq(assetsAfter, assets + amount, "Assets should be increased");
+
+        vm.startPrank({ msgSender: users.alice });
+        uint256 aliceShares = depositVault.balanceOf(users.alice);
+        (shares, assets) = depositVault.claimableRedeemRequest(users.alice);
+        depositVault.requestRedeem(amount, users.alice, users.alice);
+
+        (sharesAfter, assetsAfter) = depositVault.claimableRedeemRequest(users.alice);
+        assertEq(sharesAfter, shares + aliceShares, "Shares should be increased");
+        assertEq(assetsAfter, assets + amount, "Assets should be increased");
     }
 
     function test_requestRedeem_accumulate() public {

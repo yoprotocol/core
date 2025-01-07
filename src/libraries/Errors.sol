@@ -30,4 +30,22 @@ library Errors {
 
     /// @notice Thrown when the new fee is greater than the max allowed fee.
     error InvalidFee();
+
+    /// @notice Thrown when the underlying balance has already been updated in the current block.
+    error UpdateAlreadyCompletedInThisBlock();
+
+    /// @notice Thrown when the signature has expired
+    error SignatureExpired();
+
+    /// @notice Thrown when the signature is invalid
+    error InvalidSignature();
+
+    /// @notice Thrown when the controller tries to set itself as an operator
+    error CannotSetSelfAsOperator();
+
+    /// @notice Thrown in `manage` when the operator tries to move more assets than the vault has to cover the claims
+    error InsufficientAssetsLeftToCoverClaimable();
+
+    /// @notice Thrown when a nonce has already been used
+    error NonceAlreadyUsed();
 }

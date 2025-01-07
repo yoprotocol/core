@@ -48,8 +48,8 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         deployDepositVault();
 
         // Create users for testing.
-        users.bob = createUser("Bob");
-        users.alice = createUser("Alice");
+        (users.bob, users.bobKey) = createUser("Bob");
+        (users.alice, users.aliceKey) = createUser("Alice");
     }
 
     // ====================================== HELPERS =======================================
@@ -62,12 +62,12 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
     }
 
     /// @dev Generates a user, labels its address, funds it with test assets, and approves the protocol contracts.
-    function createUser(string memory name) internal returns (address payable) {
-        address payable user = payable(makeAddr(name));
+    function createUser(string memory name) internal returns (address payable, uint256) {
+        (address user, uint256 key) = makeAddrAndKey(name);
         vm.deal({ account: user, newBalance: 100 ether });
         deal({ token: address(usdc), to: user, give: 1_000_000e6, adjust: true });
         approveProtocol({ from: user });
-        return user;
+        return (payable(user), key);
     }
 
     /// @dev Deploys the yoVault
@@ -94,5 +94,29 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         depositVault.onUnderlyingBalanceUpdate(assets);
 
         vm.startPrank({ msgSender: users.alice });
+    }
+
+    function authorizeOperator(
+        uint256 signKey,
+        address controller,
+        address operator,
+        bool approved,
+        bytes32 nonce,
+        uint256 deadline,
+        bytes4 errorSelector
+    )
+        internal
+    {
+        // prepare signature
+        bytes32 digest = depositVault.getTypedDataHash(controller, operator, approved, nonce, deadline);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        if (errorSelector != 0) {
+            vm.expectRevert(abi.encodeWithSelector(errorSelector));
+        }
+        // call authorizeOperator
+        depositVault.authorizeOperator(controller, operator, true, nonce, deadline, signature);
     }
 }

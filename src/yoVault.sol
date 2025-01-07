@@ -10,8 +10,10 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { ERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 // __   __    ____            _                  _
 // \ \ / /__ |  _ \ _ __ ___ | |_ ___   ___ ___ | |
@@ -25,7 +27,7 @@ import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.
 /// If the vault has enough assets to fulfill the request, the assets are withdrawn and returned to the owner
 /// immediately. Otherwise, the assets are transferred to the vault and the request is stored until the operator
 /// fulfills it.
-contract yoVault is ERC4626, IyoVault, Auth, Pausable {
+contract yoVault is EIP712, ERC4626, IyoVault, Auth, Pausable {
     using Math for uint256;
     using Address for address;
     using SafeERC20 for IERC20;
@@ -40,8 +42,16 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
     /// @dev The maximum percentage that can be set as a threshold for the percentage change. 1e17 = 10%
     uint256 internal constant MAX_PERCENTAGE_THRESHOLD = 1e17;
 
+    bytes32 public constant AUTHORIZE_OPERATOR_TYPEHASH =
+    // solhint-disable-next-line max-line-length
+     keccak256("AuthorizeOperator(address controller,address operator,bool approved,bytes32 nonce,uint256 deadline)");
+
     /// @dev the aggregated underlying balances across all strategies/chains, reported by an oracle
     uint256 public aggregatedUnderlyingBalances;
+    /// @dev the total amount of assets that are claimable through withdraw or redeem
+    uint256 public totalClaimableAssets;
+    /// @dev the last block number when the aggregated underlying balances were updated
+    uint256 public lastBlockUpdated;
     /// @dev the last price per share calculated after the aggregated underlying balances are reported
     uint256 public lastPricePerShare;
     /// @dev the maximum percentage change allowed before the vault is paused. It can be updated by the owner.
@@ -52,6 +62,10 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
     /// @dev the address that receives the fees for the vault operations, if it's zero, no fees are charged
     address public feeRecipient;
 
+    /// @dev used to consume the nonces used in the authorizeOperator function
+    mapping(address controller => mapping(bytes32 nonce => bool used)) public nonces;
+    /// @dev used to store the user's operators that are allowed to withdraw or redeem on their behalf
+    mapping(address controller => mapping(address operator => bool enabled)) public isOperator;
     /// @dev used to store the amount of shares that are pending redemption, it must be fulfilled by the vault operator
     mapping(address user => PendingRedeem redeem) internal _pendingRedeem;
     /// @dev used to store the amount of shares and assets that are claimable by the controller through withdraw or
@@ -70,6 +84,7 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
         ERC4626(_asset)
         ERC20(_name, _symbol)
         Auth(_owner, Authority(address(0)))
+        EIP712("yoVault", "1")
     {
         maxPercentageChange = 1e16; // 1%
     }
@@ -96,6 +111,10 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
         );
 
         result = target.functionCallWithValue(data, value);
+
+        if (!paused()) {
+            require(_isRemainingBalanceEnough(), Errors.InsufficientAssetsLeftToCoverClaimable());
+        }
     }
 
     /// @notice Same as `manage` but allows for multiple calls in a single transaction.
@@ -121,6 +140,10 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
             );
             results[i] = targets[i].functionCallWithValue(data[i], values[i]);
         }
+
+        if (!paused()) {
+            require(_isRemainingBalanceEnough(), Errors.InsufficientAssetsLeftToCoverClaimable());
+        }
     }
 
     /// @notice Pause the contract to prevent any further deposits, withdrawals, or transfers.
@@ -141,8 +164,7 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
     /// @param controller The address of the controller. The controller can withdraw the
     /// assets once the request is fulfilled.
     /// @param owner The address of the owner.
-    /// @return requestId The ID of the request which is always 0 or the assets amount if the request is fulfilled
-    /// immediately.
+    /// @return requestId The ID of the request which is always 0.
     function requestRedeem(
         uint256 shares,
         address controller,
@@ -156,19 +178,50 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
         require(owner == msg.sender, Errors.NotSharesOwner());
         require(balanceOf(owner) >= shares, Errors.InsufficientShares());
 
-        uint256 assets = previewRedeem(shares);
-        if (IERC20(asset()).balanceOf(address(this)) >= assets) {
-            _withdraw(msg.sender, owner, owner, assets, shares);
-            return assets;
-        }
-
         emit RedeemRequest(controller, owner, 0, msg.sender, shares);
-
-        IERC20(address(this)).safeTransferFrom(owner, address(this), shares);
+        IERC20(address(this)).transferFrom(owner, address(this), shares);
 
         _pendingRedeem[controller] = PendingRedeem(shares + _pendingRedeem[controller].shares);
 
+        uint256 assets = _convertToAssets(shares, Math.Rounding.Floor);
+        if (_getAvailableBalance() >= assets) {
+            // if the vault has enough assets, fulfill the request immediately
+            _fulfillRedeem(controller, shares);
+        }
+
         return REQUEST_ID;
+    }
+
+    /// @notice Used to get the hash of the typed data for the authorizeOperator function.
+    /// @param controller The address of the controller.
+    /// @param operator The address of the operator.
+    /// @param approved The approval status of the operator.
+    /// @param nonce The nonce used to sign the message.
+    /// @param deadline The deadline for the signature to be valid.
+    /// @return The hash of the typed data (digest).
+    function getTypedDataHash(
+        address controller,
+        address operator,
+        bool approved,
+        bytes32 nonce,
+        uint256 deadline
+    )
+        public
+        view
+        returns (bytes32)
+    {
+        return _hashTypedDataV4(
+            keccak256(abi.encode(AUTHORIZE_OPERATOR_TYPEHASH, controller, operator, approved, nonce, deadline))
+        );
+    }
+
+    /// @notice Set an operator to withdraw or redeem on behalf of the caller.
+    /// @param operator The address of the operator.
+    /// @param approved The approval status of the operator.
+    function setOperator(address operator, bool approved) external {
+        require(msg.sender != operator, Errors.CannotSetSelfAsOperator());
+        isOperator[msg.sender][operator] = approved;
+        emit OperatorSet(msg.sender, operator, approved);
     }
 
     /// @notice The operator can fulfill a redeem request. Requires authorization.
@@ -176,20 +229,15 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
     /// @param shares The amount of shares to redeem.
     /// @return assets The amount of assets redeemed.
     function fulfillRedeem(address controller, uint256 shares) external requiresAuth returns (uint256 assets) {
-        PendingRedeem storage pending = _pendingRedeem[controller];
-        require(pending.shares != 0 && shares <= pending.shares, Errors.InvalidSharesAmount());
-
-        assets = convertToAssets(shares);
-
-        _claimableRedeem[controller] =
-            ClaimableRedeem(_claimableRedeem[controller].assets + assets, _claimableRedeem[controller].shares + shares);
-
-        pending.shares -= shares;
+        return _fulfillRedeem(controller, shares);
     }
 
     /// @notice The oracle can update the aggregated underlying balances across all strategies/chains.
+    /// @dev Can be called only once per block to prevent oracle abuse and flash loan attacks.
     /// @param newAggregatedBalance The new aggregated underlying balances.
     function onUnderlyingBalanceUpdate(uint256 newAggregatedBalance) external requiresAuth {
+        require(block.number > lastBlockUpdated, Errors.UpdateAlreadyCompletedInThisBlock());
+
         emit UnderlyingBalanceUpdated(aggregatedUnderlyingBalances, newAggregatedBalance);
         aggregatedUnderlyingBalances = newAggregatedBalance;
 
@@ -203,6 +251,41 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
         } else {
             lastPricePerShare = newPricePerShare;
         }
+
+        lastBlockUpdated = block.number;
+    }
+
+    /// @notice Authorize an operator to withdraw or redeem on behalf of the controller.
+    /// @param controller The address of the controller.
+    /// @param operator The address of the operator.
+    /// @param approved The approval status of the operator.
+    /// @param nonce The nonce used to sign the message.
+    /// @param deadline The deadline for the signature to be valid.
+    /// @param signature The signature of the message.
+    function authorizeOperator(
+        address controller,
+        address operator,
+        bool approved,
+        bytes32 nonce,
+        uint256 deadline,
+        bytes memory signature
+    )
+        external
+    {
+        require(controller != operator, Errors.CannotSetSelfAsOperator());
+        require(block.timestamp <= deadline, Errors.SignatureExpired());
+        require(!nonces[controller][nonce], Errors.NonceAlreadyUsed());
+
+        nonces[controller][nonce] = true;
+
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(abi.encode(AUTHORIZE_OPERATOR_TYPEHASH, controller, operator, approved, nonce, deadline))
+        );
+
+        require(SignatureChecker.isValidSignatureNow(controller, digest, signature), Errors.InvalidSignature());
+
+        isOperator[controller][operator] = approved;
+        emit OperatorSet(controller, operator, approved);
     }
 
     /// @notice Update the maximum percentage change allowed before the vault is paused.
@@ -276,7 +359,7 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
         returns (uint256)
     {
         require(assets != 0, Errors.AssetsAmountZero());
-        require(controller == msg.sender, Errors.NotSharesOwner());
+        require(controller == msg.sender || isOperator[controller][msg.sender], Errors.NotSharesOwner());
 
         ClaimableRedeem storage claimable = _claimableRedeem[controller];
         require(claimable.assets >= assets, Errors.InsufficientAssets());
@@ -310,7 +393,7 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
         returns (uint256)
     {
         require(shares != 0, Errors.SharesAmountZero());
-        require(controller == msg.sender, Errors.NotSharesOwner());
+        require(controller == msg.sender || isOperator[controller][msg.sender], Errors.NotSharesOwner());
 
         ClaimableRedeem storage claimable = _claimableRedeem[controller];
         require(claimable.shares >= shares, Errors.InsufficientShares());
@@ -350,6 +433,8 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
             feeAmount = assets.mulDiv(fee, DENOMINATOR, Math.Rounding.Floor);
             IERC20(asset()).safeTransfer(feeRecipient, feeAmount);
         }
+
+        totalClaimableAssets -= assets;
         super._withdraw(caller, receiver, owner, assets - feeAmount, shares);
     }
 
@@ -365,6 +450,38 @@ contract yoVault is ERC4626, IyoVault, Auth, Pausable {
         }
         uint256 diff = newPrice > oldPrice ? newPrice - oldPrice : oldPrice - newPrice;
         return diff.mulDiv(DENOMINATOR, oldPrice, Math.Rounding.Ceil);
+    }
+
+    /// @dev Used to fulfill a redeem request.
+    /// It reduces the pending redeem shares and increases the claimable assets.
+    /// @param controller The address of the controller.
+    /// @param shares The amount of shares to redeem.
+    /// @return assets The amount of claimable assets.
+    function _fulfillRedeem(address controller, uint256 shares) internal returns (uint256 assets) {
+        PendingRedeem storage pending = _pendingRedeem[controller];
+        require(pending.shares != 0 && shares <= pending.shares, Errors.InvalidSharesAmount());
+
+        assets = _convertToAssets(shares, Math.Rounding.Floor);
+        totalClaimableAssets += assets;
+        _claimableRedeem[controller] =
+            ClaimableRedeem(_claimableRedeem[controller].assets + assets, _claimableRedeem[controller].shares + shares);
+
+        pending.shares -= shares;
+
+        emit RequestFulfilled(controller, shares, assets);
+    }
+
+    /// @dev The available balance is the balance of the vault minus the total claimable assets.
+    /// @return The available balance.
+    function _getAvailableBalance() internal view returns (uint256) {
+        uint256 balance = IERC20(asset()).balanceOf(address(this));
+        return balance > totalClaimableAssets ? balance - totalClaimableAssets : 0;
+    }
+
+    /// @dev The balance of the vault minus the total claimable assets must be greater than or equal to zero.
+    function _isRemainingBalanceEnough() internal view returns (bool) {
+        uint256 balance = IERC20(asset()).balanceOf(address(this));
+        return balance >= totalClaimableAssets;
     }
 
     //============================== RECEIVE ===============================

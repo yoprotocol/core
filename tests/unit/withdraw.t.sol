@@ -33,8 +33,12 @@ contract Withdraw_Unit_Concrete_Test is Base_Test {
         assertEq(vaultAssets, amount);
 
         uint256 aliceAssets = usdc.balanceOf(users.alice);
+        uint256 totalClaimableAssets = depositVault.totalClaimableAssets();
 
         depositVault.withdraw(amount, users.alice, users.alice);
+
+        uint256 totalClaimableAssetsAfter = depositVault.totalClaimableAssets();
+        assertEq(totalClaimableAssetsAfter, totalClaimableAssets - amount);
 
         uint256 aliceSharesAfter = depositVault.balanceOf(users.alice);
         assertEq(aliceSharesAfter, 0);
@@ -80,6 +84,28 @@ contract Withdraw_Unit_Concrete_Test is Base_Test {
         depositVault.withdraw(amount - 2, users.alice, users.alice);
         vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientAssets.selector));
         depositVault.withdraw(amount + 3, users.alice, users.alice);
+    }
+
+    function test_withdraw_as_operator() public {
+        bytes32 nonce = keccak256(abi.encodePacked("test-nonce"));
+        uint256 deadline = block.timestamp + 1 hours;
+
+        uint256 aliceAssets = usdc.balanceOf(users.alice);
+        uint256 bobAssets = usdc.balanceOf(users.bob);
+
+        // withdraw as operator
+        vm.startPrank({ msgSender: users.bob });
+        vm.expectRevert(abi.encodeWithSelector(Errors.NotSharesOwner.selector));
+        depositVault.withdraw(amount, users.alice, users.alice);
+
+        authorizeOperator(users.aliceKey, users.alice, users.bob, true, nonce, deadline, 0);
+        depositVault.withdraw(amount, users.alice, users.alice);
+
+        uint256 aliceAssetsAfter = usdc.balanceOf(users.alice);
+        assertEq(aliceAssetsAfter, aliceAssets + amount, "Alice assets should increase");
+
+        uint256 bobAssetsAfter = usdc.balanceOf(users.bob);
+        assertEq(bobAssetsAfter, bobAssets, "Bob assets should not change");
     }
 
     function enableFees() internal {

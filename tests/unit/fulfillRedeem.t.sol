@@ -21,8 +21,14 @@ contract Fulfill_Unit_Concrete_Test is Base_Test {
 
     function test_fulfill_success() public {
         vm.startPrank({ msgSender: users.admin });
+        uint256 totalClaimableAssets = depositVault.totalClaimableAssets();
+
         depositVault.fulfillRedeem(users.alice, aliceShares);
+
         (uint256 shares, uint256 assets) = depositVault.claimableRedeemRequest(users.alice);
+        uint256 totalClaimableAssetsAfter = depositVault.totalClaimableAssets();
+
+        assertEq(totalClaimableAssetsAfter, totalClaimableAssets + amount);
         assertEq(shares, aliceShares);
         assertEq(assets, amount);
     }
