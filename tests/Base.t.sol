@@ -3,9 +3,10 @@ pragma solidity 0.8.28;
 
 import { Test } from "forge-std/src/Test.sol";
 
-import { Authority } from "@solmate/auth/Auth.sol";
+import { Authority } from "src/AuthUpgradable.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { Users } from "./utils/Types.sol";
 import { Utils } from "./utils/Utils.sol";
@@ -72,51 +73,38 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
 
     /// @dev Deploys the yoVault
     function deployDepositVault() internal {
-        depositVault = new yoVault(usdc, users.admin, "yoUSDCVault", "yoUSDC");
+        yoVault vault = new yoVault();
+
+        bytes memory data =
+            abi.encodeWithSelector(yoVault.initialize.selector, usdc, users.admin, "yoUSDCVault", "yoUSDC");
+
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(vault), users.admin, data);
+        depositVault = yoVault(payable(address(proxy)));
+
         authority = new MockAuthority(users.admin, Authority(address(0)));
         depositVault.setAuthority({ newAuthority: authority });
 
-        // set the admin role for the admin
         MockAuthority(address(authority)).setUserRole(users.admin, ADMIN_ROLE, true);
 
         vm.label({ account: address(depositVault), newLabel: "yoUSDCVault" });
     }
 
-    function moveAssetsAndUpdateUnderlyingBalances(uint256 assets) internal {
+    function moveAssetsFromVault(uint256 assets) internal {
         vm.startPrank({ msgSender: users.admin });
-        bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, users.bob, assets);
+        bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, users.admin, assets);
 
         MockAuthority(address(depositVault.authority())).setRoleCapability(
             ADMIN_ROLE, address(usdc), IERC20.transfer.selector, true
         );
 
         depositVault.manage(address(usdc), data, 0);
-        depositVault.onUnderlyingBalanceUpdate(assets);
 
-        vm.startPrank({ msgSender: users.alice });
+        vm.stopPrank();
     }
 
-    function authorizeOperator(
-        uint256 signKey,
-        address controller,
-        address operator,
-        bool approved,
-        bytes32 nonce,
-        uint256 deadline,
-        bytes4 errorSelector
-    )
-        internal
-    {
-        // prepare signature
-        bytes32 digest = depositVault.getTypedDataHash(controller, operator, approved, nonce, deadline);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        if (errorSelector != 0) {
-            vm.expectRevert(abi.encodeWithSelector(errorSelector));
-        }
-        // call authorizeOperator
-        depositVault.authorizeOperator(controller, operator, true, nonce, deadline, signature);
+    function updateUnderlyingBalance(uint256 assets) internal {
+        vm.startPrank({ msgSender: users.admin });
+        depositVault.onUnderlyingBalanceUpdate(assets);
+        vm.stopPrank();
     }
 }

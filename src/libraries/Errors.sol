@@ -10,9 +10,6 @@ library Errors {
     /// @notice Thrown when insufficient shares balance is available to complete the operation.
     error InsufficientShares();
 
-    /// @notice Thrown when insufficient assets balance is available to complete the operation.
-    error InsufficientAssets();
-
     /// @notice Thrown when the operation is called by a user that is not the owner of the shares.
     error NotSharesOwner();
 
@@ -25,6 +22,9 @@ library Errors {
     /// @notice Thrown when a claim request is fulfilled with an invalid shares amount.
     error InvalidSharesAmount();
 
+    /// @notice Thrown when a withdraw is attempted with an amount different than the claimable assets.
+    error InvalidAssetsAmount();
+
     /// @notice Thrown when the new max percentage is greater than the current max percentage.
     error InvalidMaxPercentage();
 
@@ -34,18 +34,11 @@ library Errors {
     /// @notice Thrown when the underlying balance has already been updated in the current block.
     error UpdateAlreadyCompletedInThisBlock();
 
-    /// @notice Thrown when the signature has expired
-    error SignatureExpired();
+    /// @notice Thrown when redeem() or withdraw() is called
+    error UseRequestRedeem();
 
-    /// @notice Thrown when the signature is invalid
-    error InvalidSignature();
-
-    /// @notice Thrown when the controller tries to set itself as an operator
-    error CannotSetSelfAsOperator();
-
-    /// @notice Thrown in `manage` when the operator tries to move more assets than the vault has to cover the claims
-    error InsufficientAssetsLeftToCoverClaimable();
-
-    /// @notice Thrown when a nonce has already been used
-    error NonceAlreadyUsed();
+    /// @notice Thrown when msg.sender is not the vault
+    error Escrow__OnlyVault();
+    /// @notice Thrown when the requested amount of assets is zero
+    error Escrow__AmountZero();
 }

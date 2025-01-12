@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Base_Test } from "../Base.t.sol";
+import { Base_Test } from "../../Base.t.sol";
 import { Errors } from "src/libraries/Errors.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";

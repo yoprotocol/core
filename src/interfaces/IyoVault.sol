@@ -5,10 +5,6 @@ pragma solidity 0.8.28;
 /// @notice Interface for the YO vault part of the YO protocol
 interface IyoVault {
     struct PendingRedeem {
-        uint256 shares;
-    }
-
-    struct ClaimableRedeem {
         uint256 assets;
         uint256 shares;
     }
@@ -16,7 +12,12 @@ interface IyoVault {
     /// @notice Emitted when the fee is updated
     /// @param lastFee The last fee
     /// @param newFee The new fee
-    event FeeUpdated(uint256 lastFee, uint256 newFee);
+    event WithdrawFeeUpdated(uint256 lastFee, uint256 newFee);
+
+    /// @notice Emitted when the fee is updated
+    /// @param lastFee The last fee
+    /// @param newFee The new fee
+    event DepositFeeUpdated(uint256 lastFee, uint256 newFee);
 
     /// @notice Emitted when the fee recipient is updated
     /// @param lastFeeRecipient The last fee recipient
@@ -34,13 +35,13 @@ interface IyoVault {
     event UnderlyingBalanceUpdated(uint256 lastUnderlyingBalance, uint256 newUnderlyingBalance);
 
     /// @notice Emitted when a new redeem request is created
-    /// @param controller The controller address
+    /// @param receiver The receiving address
     /// @param owner The owner address
-    /// @param requestId The request ID
-    /// @param sender The sender address
     /// @param assets The assets amount
+    /// @param shares The shares amount
+    /// @param instant The instant status
     event RedeemRequest(
-        address indexed controller, address indexed owner, uint256 indexed requestId, address sender, uint256 assets
+        address indexed receiver, address indexed owner, uint256 assets, uint256 shares, bool indexed instant
     );
 
     /// @notice Emitted when an operator status is updated
@@ -49,10 +50,16 @@ interface IyoVault {
     event OperatorSet(address indexed controller, address indexed operator, bool indexed status);
 
     /// @notice Emitted when a redeem request is fulfilled
-    /// @param controller The controller address
+    /// @param receiver The receiving address
     /// @param shares The shares amount
     /// @param assets The assets amount
-    event RequestFulfilled(address indexed controller, uint256 shares, uint256 assets);
+    event RequestFulfilled(address indexed receiver, uint256 shares, uint256 assets);
+
+    /// @notice Emitted when a redeem request is cancelled
+    /// @param receiver The receiving address
+    /// @param shares The shares amount
+    /// @param assets The assets amount
+    event RequestCancelled(address indexed receiver, uint256 shares, uint256 assets);
 
     function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId);
 }

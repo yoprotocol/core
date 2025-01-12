@@ -6,6 +6,7 @@ import { yoVault } from "src/yoVault.sol";
 import { RolesAuthority } from "src/RolesAuthority.sol";
 import { TimelockController } from "src/TimelockController.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseScript } from "./Base.s.sol";
 
@@ -53,9 +54,16 @@ contract Deploy is BaseScript {
         require(ASSET != address(0), "Asset address not set");
         require(OWNER != address(0), "Owner address not set");
 
-        vault = new yoVault(IERC20(ASSET), OWNER, SHARE_NAME, SHARE_SYMBOL);
+        yoVault impl = new yoVault();
+        console.log("yoVault implementation deployed at: ", address(impl));
 
-        console.log("yoVault deployed at: ", address(vault));
+        bytes memory data =
+            abi.encodeWithSelector(vault.initialize.selector, IERC20(ASSET), OWNER, SHARE_NAME, SHARE_SYMBOL);
+
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(impl), OWNER, data);
+
+        vault = yoVault(payable(address(proxy)));
+        console.log("yoVault proxy deployed at: ", address(vault));
 
         vault.setAuthority(authority);
         console.log("Authority set for vault");
@@ -71,7 +79,7 @@ contract Deploy is BaseScript {
         console.log("Name:", vault.name());
         console.log("Symbol:", vault.symbol());
         console.log("Owner:", vault.owner());
-        console.log("Fee:", vault.fee());
+        console.log("Fee:", vault.feeOnDeposit());
         console.log("FeeRecipient:", vault.feeRecipient());
     }
 
