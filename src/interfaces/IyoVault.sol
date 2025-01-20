@@ -44,11 +44,6 @@ interface IyoVault {
         address indexed receiver, address indexed owner, uint256 assets, uint256 shares, bool indexed instant
     );
 
-    /// @notice Emitted when an operator status is updated
-    /// @param operator The operator address
-    /// @param status The operator status
-    event OperatorSet(address indexed controller, address indexed operator, bool indexed status);
-
     /// @notice Emitted when a redeem request is fulfilled
     /// @param receiver The receiving address
     /// @param shares The shares amount
@@ -61,5 +56,5 @@ interface IyoVault {
     /// @param assets The assets amount
     event RequestCancelled(address indexed receiver, uint256 shares, uint256 assets);
 
-    function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId);
+    function requestRedeem(uint256 shares, address receiver, address owner) external returns (uint256 requestId);
 }

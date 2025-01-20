@@ -16,9 +16,6 @@ library Errors {
     /// @notice Thrown when the input shares amount is zero.
     error SharesAmountZero();
 
-    /// @notice Thrown when the input assets amount is zero.
-    error AssetsAmountZero();
-
     /// @notice Thrown when a claim request is fulfilled with an invalid shares amount.
     error InvalidSharesAmount();
 
@@ -39,6 +36,7 @@ library Errors {
 
     /// @notice Thrown when msg.sender is not the vault
     error Escrow__OnlyVault();
+
     /// @notice Thrown when the requested amount of assets is zero
     error Escrow__AmountZero();
 }

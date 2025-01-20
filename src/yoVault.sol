@@ -95,8 +95,7 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
     {
         bytes4 functionSig = bytes4(data);
         require(
-            Authority(authority()).canCall(msg.sender, target, functionSig),
-            Errors.TargetMethodNotAuthorized(target, functionSig)
+            authority().canCall(msg.sender, target, functionSig), Errors.TargetMethodNotAuthorized(target, functionSig)
         );
 
         result = target.functionCallWithValue(data, value);
@@ -120,7 +119,7 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
         for (uint256 i; i < targetsLength; ++i) {
             bytes4 functionSig = bytes4(data[i]);
             require(
-                Authority(authority()).canCall(msg.sender, targets[i], functionSig),
+                authority().canCall(msg.sender, targets[i], functionSig),
                 Errors.TargetMethodNotAuthorized(targets[i], functionSig)
             );
             results[i] = targets[i].functionCallWithValue(data[i], values[i]);
@@ -144,38 +143,30 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
     /// @param shares The amount of shares to redeem.
     /// @param receiver The address of the receiver of the assets.
     /// @param owner The address of the owner.
-    /// @return requestId The ID of the request which is always 0.
-    function requestRedeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    )
-        external
-        whenNotPaused
-        returns (uint256 requestId)
-    {
+    /// @return The ID of the request which is always 0 or the assets amount if the request is immediately
+    /// processed.
+    function requestRedeem(uint256 shares, address receiver, address owner) external whenNotPaused returns (uint256) {
         require(shares > 0, Errors.SharesAmountZero());
         require(owner == msg.sender, Errors.NotSharesOwner());
         require(balanceOf(owner) >= shares, Errors.InsufficientShares());
 
         uint256 assetsWithFee = super.previewRedeem(shares);
-        uint256 assets = assetsWithFee - _feeOnTotal(assetsWithFee, feeOnWithdraw);
 
         // instant redeem if the vault has enough assets
         if (_getAvailableBalance() >= assetsWithFee) {
-            _withdraw(owner, owner, owner, assets, shares);
-            emit RedeemRequest(receiver, owner, assets, shares, true);
-            return assets;
+            _withdraw(owner, receiver, owner, assetsWithFee, shares);
+            emit RedeemRequest(receiver, owner, assetsWithFee, shares, true);
+            return assetsWithFee;
         }
 
-        emit RedeemRequest(receiver, owner, assets, shares, false);
+        emit RedeemRequest(receiver, owner, assetsWithFee, shares, false);
         // transfer the shares to the vault and store the request
         IERC20(address(this)).transferFrom(owner, address(this), shares);
 
-        totalPendingAssets += assets;
+        totalPendingAssets += assetsWithFee;
         _pendingRedeem[receiver] = PendingRedeem({
-            assets: _pendingRedeem[receiver].assets + assets,
-            shares: _pendingRedeem[receiver].shares + shares
+            shares: _pendingRedeem[receiver].shares + shares,
+            assets: _pendingRedeem[receiver].assets + assetsWithFee
         });
 
         return REQUEST_ID;
@@ -184,35 +175,35 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
     /// @notice The operator can fulfill a redeem request. Requires authorization.
     /// @param receiver The address of the receiver of the assets.
     /// @param shares The amount of shares to fulfil.
-    /// @param assets The amount of assets to fulfil.
-    function fulfillRedeem(address receiver, uint256 shares, uint256 assets) external requiresAuth {
+    /// @param assetsWithFee The amount of assets to fulfil including the fee.
+    function fulfillRedeem(address receiver, uint256 shares, uint256 assetsWithFee) external requiresAuth {
         PendingRedeem storage pending = _pendingRedeem[receiver];
         require(pending.shares != 0 && shares <= pending.shares, Errors.InvalidSharesAmount());
-        require(pending.assets != 0 && assets <= pending.assets, Errors.InvalidAssetsAmount());
+        require(pending.assets != 0 && assetsWithFee <= pending.assets, Errors.InvalidAssetsAmount());
 
-        pending.assets -= assets;
         pending.shares -= shares;
-        totalPendingAssets -= assets;
+        pending.assets -= assetsWithFee;
+        totalPendingAssets -= assetsWithFee;
 
-        emit RequestFulfilled(receiver, shares, assets);
+        emit RequestFulfilled(receiver, shares, assetsWithFee);
         // burn the shares from the vault and transfer the assets to the receiver
-        _withdraw(address(this), receiver, address(this), assets, shares);
+        _withdraw(address(this), receiver, address(this), assetsWithFee, shares);
     }
 
     /// @notice The operator can cancel a redeem request in case of an black swan event.
     /// @param receiver The address of the receiver of the assets.
     /// @param shares The amount of shares to cancel.
-    /// @param assets The amount of assets to cancel.
-    function cancelRedeem(address receiver, uint256 shares, uint256 assets) external requiresAuth {
+    /// @param assetsWithFee The amount of assets to cancel including the fee.
+    function cancelRedeem(address receiver, uint256 shares, uint256 assetsWithFee) external requiresAuth {
         PendingRedeem storage pending = _pendingRedeem[receiver];
         require(pending.shares != 0 && shares <= pending.shares, Errors.InvalidSharesAmount());
-        require(pending.assets != 0 && assets <= pending.assets, Errors.InvalidAssetsAmount());
+        require(pending.assets != 0 && assetsWithFee <= pending.assets, Errors.InvalidAssetsAmount());
 
-        pending.assets -= assets;
         pending.shares -= shares;
-        totalPendingAssets -= assets;
+        pending.assets -= assetsWithFee;
+        totalPendingAssets -= assetsWithFee;
 
-        emit RequestCancelled(receiver, shares, assets);
+        emit RequestCancelled(receiver, shares, assetsWithFee);
         // transfer the shares back to the owner
         IERC20(address(this)).transfer(receiver, shares);
     }
@@ -327,6 +318,12 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
         return assets + _feeOnRaw(assets, feeOnDeposit);
     }
 
+    /// @dev Preview adding an exit fee on withdraw. See {IERC4626-previewWithdraw}.
+    function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
+        uint256 fee = _feeOnRaw(assets, feeOnWithdraw);
+        return super.previewWithdraw(assets + fee);
+    }
+
     /// @dev Preview taking an exit fee on redeem. See {IERC4626-previewRedeem}.
     function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
         uint256 assets = super.previewRedeem(shares);
@@ -338,18 +335,19 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
         address caller,
         address receiver,
         address owner,
-        uint256 assets,
+        uint256 assetsWithFee,
         uint256 shares
     )
         internal
         override
     {
-        uint256 feeAmount = _feeOnRaw(assets, feeOnWithdraw);
+        uint256 feeAmount = _feeOnTotal(assetsWithFee, feeOnWithdraw);
+        uint256 assets = assetsWithFee - feeAmount;
         address recipient = feeRecipient;
 
         super._withdraw(caller, receiver, owner, assets, shares);
 
-        if (feeAmount > 0 && recipient != address(this)) {
+        if (feeAmount > 0 && recipient != address(0)) {
             IERC20(asset()).safeTransfer(recipient, feeAmount);
         }
     }
@@ -360,7 +358,7 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
 
         super._deposit(caller, receiver, assets, shares);
 
-        if (feeAmount > 0 && recipient != address(this)) {
+        if (feeAmount > 0 && recipient != address(0)) {
             IERC20(asset()).safeTransfer(recipient, feeAmount);
         }
     }

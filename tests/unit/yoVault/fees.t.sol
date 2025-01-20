@@ -205,11 +205,11 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         vm.startPrank({ msgSender: users.admin });
         uint256 totalPendingAssetsAfter = depositVault.totalPendingAssets();
         // check that the total pending assets are accounted for correctly including both the deposit and redeem fees
-        assertEq(totalPendingAssetsAfter, totalPendingAssetsBefore + netDepositAmount - redeemFeeAmount);
+        assertEq(totalPendingAssetsAfter, totalPendingAssetsBefore + netDepositAmount);
         (uint256 pendingAssets, uint256 pendingShares) = depositVault.pendingRedeemRequest(users.alice);
         // check that the user pending assets and shares are accounted for correctly including both the deposit and
         // redeem fees
-        assertEq(pendingAssets, netDepositAmount - redeemFeeAmount);
+        assertEq(pendingAssets, netDepositAmount);
         assertEq(pendingShares, aliceShares);
 
         depositVault.fulfillRedeem(users.alice, pendingShares, pendingAssets);
