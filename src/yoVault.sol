@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import { Errors } from "./libraries/Errors.sol";
 import { IyoVault } from "./interfaces/IyoVault.sol";
 
+import { Compatible } from "./Compatible.sol";
 import { AuthUpgradeable, Authority } from "./AuthUpgradable.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -26,7 +27,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 /// immediately. Otherwise, the assets are transferred to the vault and the request is stored until the operator
 /// fulfills it.
 
-contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgradeable {
+contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, PausableUpgradeable {
     using Math for uint256;
     using Address for address;
     using SafeERC20 for IERC20;
@@ -71,8 +72,8 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
 
     //============================== INITIALIZER ===============================
     function initialize(IERC20 _asset, address _owner, string memory _name, string memory _symbol) public initializer {
-        __ERC4626_init(_asset);
         __ERC20_init(_name, _symbol);
+        __ERC4626_init(_asset);
         __Auth_init(_owner, Authority(address(0)));
         __Pausable_init();
         maxPercentageChange = 1e16; // 1%
@@ -395,9 +396,4 @@ contract yoVault is ERC4626Upgradeable, IyoVault, AuthUpgradeable, PausableUpgra
         uint256 balance = IERC20(asset()).balanceOf(address(this));
         return balance > totalPendingAssets ? balance - totalPendingAssets : 0;
     }
-
-    //============================== RECEIVE ===============================
-
-    /// @notice Fallback function to receive native assets.
-    receive() external payable { }
 }
