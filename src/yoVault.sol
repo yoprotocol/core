@@ -162,7 +162,7 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
 
         emit RedeemRequest(receiver, owner, assetsWithFee, shares, false);
         // transfer the shares to the vault and store the request
-        IERC20(address(this)).transferFrom(owner, address(this), shares);
+        _transfer(owner, address(this), shares);
 
         totalPendingAssets += assetsWithFee;
         _pendingRedeem[receiver] = PendingRedeem({
