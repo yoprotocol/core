@@ -17,9 +17,11 @@ abstract contract AuthUpgradeable is Initializable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("auth.storage")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line const-name-snakecase
     bytes32 private constant AuthStorageLocation = 0xdd3fd67aef415aded9493b31ad20a02d2991d4bb2760431cc729821271eaea00;
 
     function _getAuthStorage() private pure returns (AuthStorage storage $) {
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             $.slot := AuthStorageLocation
         }
@@ -57,6 +59,7 @@ abstract contract AuthUpgradeable is Initializable {
         AuthStorage storage $ = _getAuthStorage();
         // We check if the caller is the owner first because we want to ensure they can
         // always swap out the authority even if it's reverting or using up a lot of gas.
+        // solhint-disable-next-line reason-string
         require(msg.sender == $.owner || $.authority.canCall(msg.sender, address(this), msg.sig));
 
         $.authority = newAuthority;
