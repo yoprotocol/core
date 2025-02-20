@@ -225,10 +225,9 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
         /// @dev Pause the vault if the percentage change is greater than the threshold (works in both directions)
         if (percentageChange > maxPercentageChange) {
             _pause();
-        } else {
-            lastPricePerShare = newPricePerShare;
         }
 
+        lastPricePerShare = newPricePerShare;
         lastBlockUpdated = block.number;
     }
 
