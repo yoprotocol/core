@@ -2,7 +2,7 @@
 pragma solidity >=0.8.28 <0.9.0;
 
 import "forge-std/Script.sol";
-import { yoVault } from "src/yoVault.sol";
+import { yoVault } from "src/yoVault/yoVault.sol";
 import { RolesAuthority } from "@solmate/auth/authorities/RolesAuthority.sol";
 import { IWETH9 } from "src/interfaces/IWETH9.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

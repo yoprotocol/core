@@ -24,14 +24,14 @@ integration with external strategies, oracles, and cross-chain liquidity mechani
 
 ### Core Contracts
 
-- **[`yoVault.sol`](https://github.com/yoprotocol/core/blob/main/src/yoVault.sol)**: Implements the main vault
+- **[`yoVault.sol`](https://github.com/yoprotocol/core/blob/main/src/yoVault/yoVault.sol)**: Implements the main vault
   functionality, including deposits, redemptions, and balance tracking.
 - **[`Escrow.sol`](https://github.com/yoprotocol/core/blob/main/src/Escrow.sol)**: An escrow contract for controlled
   asset withdrawals.
-- **[`Compatible.sol`](https://github.com/yoprotocol/core/blob/main/src/Compatible.sol)**: Allows the contract to
+- **[`Compatible.sol`](https://github.com/yoprotocol/core/blob/main/src/base/Compatible.sol)**: Allows the contract to
   receive ETH and ERC721/ERC1155 tokens.
-- **[`AuthUpgradeable.sol`](https://github.com/yoprotocol/core/blob/main/src/AuthUpgradable.sol)**: Upgradable access
-  control contract.
+- **[`AuthUpgradeable.sol`](https://github.com/yoprotocol/core/blob/main/src/base/AuthUpgradable.sol)**: Upgradable
+  access control contract.
 
 ### Libraries
 

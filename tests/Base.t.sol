@@ -14,7 +14,7 @@ import { Events } from "./utils/Events.sol";
 import { Constants } from "./utils/Constants.sol";
 import { MockAuthority } from "./mocks/MockAuthority.sol";
 
-import { yoVault } from "src/yoVault.sol";
+import { yoVault } from "src/yoVault/yoVault.sol";
 
 /// @notice Base test contract with common logic needed by all tests.
 

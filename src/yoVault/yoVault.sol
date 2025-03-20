@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Errors } from "./libraries/Errors.sol";
-import { IyoVault } from "./interfaces/IyoVault.sol";
+import { Errors } from "../libraries/Errors.sol";
+import { IyoVault } from "../interfaces/IyoVault.sol";
 
-import { Compatible } from "./base/Compatible.sol";
-import { AuthUpgradeable, Authority } from "./base/AuthUpgradable.sol";
+import { Compatible } from "../base/Compatible.sol";
+import { AuthUpgradeable, Authority } from "../base/AuthUpgradable.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
