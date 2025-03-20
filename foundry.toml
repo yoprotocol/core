@@ -2,7 +2,7 @@
 
 [profile.default]
 auto_detect_solc = false
-block_timestamp = 1_738_368_000 # Feb 1, 2025 at 00:00 GMT
+block_timestamp = 1_738_368_000  # Feb 1, 2025 at 00:00 GMT
 bytecode_hash = "none"
 evm_version = "shanghai"
 fuzz = { runs = 1_000 }
@@ -14,6 +14,10 @@ script = "script"
 solc = "0.8.28"
 src = "src"
 test = "tests"
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
 
 [profile.ci]
 fuzz = { runs = 10_000 }
@@ -21,6 +25,7 @@ verbosity = 4
 
 [etherscan]
 mainnet = { key = "${API_KEY_ETHERSCAN}" }
+base = { key = "${API_KEY_ETHERSCAN_BASE}" }
 
 [fmt]
 bracket_spacing = true
@@ -35,7 +40,7 @@ wrap_comments = true
 [rpc_endpoints]
 arbitrum = "https://arbitrum-one-rpc.publicnode.com"
 avalanche = "https://avalanche-c-chain-rpc.publicnode.com"
-base = "https://mainnet.base.org"
+base = "https://base-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
 bnb_smart_chain = "https://bsc-dataseed.binance.org"
 gnosis_chain = "https://rpc.gnosischain.com"
 localhost = "http://localhost:8545"

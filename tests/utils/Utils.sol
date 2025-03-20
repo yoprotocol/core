@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { CommonBase } from "forge-std/src/Base.sol";
+import { CommonBase } from "forge-std/Base.sol";
 
 abstract contract Utils is CommonBase {
     /// @dev Stops the active prank and sets a new one.
