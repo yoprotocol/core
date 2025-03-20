@@ -3,20 +3,18 @@ pragma solidity >=0.8.28 <0.9.0;
 
 import "forge-std/Script.sol";
 import { yoVault } from "src/yoVault.sol";
-import { RolesAuthority } from "src/RolesAuthority.sol";
-import { TimelockController } from "src/TimelockController.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
+import { RolesAuthority } from "@solmate/auth/authorities/RolesAuthority.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseScript } from "./Base.s.sol";
 
 contract Deploy is BaseScript {
-    address OWNER = address(0); // Owner of the vault
-    address ASSET = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // Underlying asset
+    address public OWNER = address(0); // Owner of the vault
+    address public ASSET = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // Underlying asset
 
-    string constant SHARE_NAME = "yoVaultETH"; // Name of the token shares
-    string constant SHARE_SYMBOL = "yoETH"; // Symbol of the token shares
+    string public constant SHARE_NAME = "yoVaultETH"; // Name of the token shares
+    string public constant SHARE_SYMBOL = "yoETH"; // Symbol of the token shares
 
     function run() public broadcast returns (yoVault vault, RolesAuthority authority) {
         OWNER = address(broadcaster);

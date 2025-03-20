@@ -3,22 +3,19 @@ pragma solidity >=0.8.28 <0.9.0;
 
 import "forge-std/Script.sol";
 import { yoVault } from "src/yoVault.sol";
-import { RolesAuthority } from "src/RolesAuthority.sol";
-import { TimelockController } from "src/TimelockController.sol";
-import { IWETH9 } from "src/interfaces/IWETH9.sol";
+import { RolesAuthority } from "@solmate/auth/authorities/RolesAuthority.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import { Escrow } from "src/Escrow.sol";
 
 import { BaseScript } from "./Base.s.sol";
 
 contract Deploy is BaseScript {
-    address OWNER = address(0); // Owner of the vault
-    address ASSET = address(0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf); // Underlying asset
+    address public OWNER = address(0); // Owner of the vault
+    address public ASSET = address(0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf); // Underlying asset
 
-    string constant SHARE_NAME = "yoVaultBTC"; // Name of the token shares
-    string constant SHARE_SYMBOL = "yoBTC"; // Symbol of the token shares
-    uint256 constant INITIAL_LOCK_DEPOSIT = 10_000; // Initial deposit on behalf of the vault
+    string public constant SHARE_NAME = "yoVaultBTC"; // Name of the token shares
+    string public constant SHARE_SYMBOL = "yoBTC"; // Symbol of the token shares
+    uint256 public constant INITIAL_LOCK_DEPOSIT = 10_000; // Initial deposit on behalf of the vault
 
     function run() public broadcast returns (yoVault vault) {
         OWNER = address(broadcaster);

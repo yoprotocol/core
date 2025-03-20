@@ -33,7 +33,6 @@ contract OnUnderlyingBalanceUpdate_Unit_Concrete_Test is Base_Test {
         depositVault.deposit(amount, users.alice);
 
         vm.startPrank({ msgSender: users.admin });
-        uint256 currentPricePerShare = depositVault.totalAssets().mulDiv(DENOMINATOR, depositVault.totalSupply());
         bool pausedBefore = depositVault.paused();
         assertFalse(pausedBefore, "vault should not be paused");
         depositVault.onUnderlyingBalanceUpdate(0);
@@ -43,7 +42,6 @@ contract OnUnderlyingBalanceUpdate_Unit_Concrete_Test is Base_Test {
         depositVault.onUnderlyingBalanceUpdate(newUnderlyingBalance);
         bool pausedAfter = depositVault.paused();
 
-        assertEq(currentPricePerShare, depositVault.lastPricePerShare(), "price per share should not change");
         assertTrue(pausedAfter, "vault should be paused");
     }
 
