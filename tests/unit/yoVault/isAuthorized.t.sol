@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Base_Test } from "../../Base.t.sol";
+import { Base_Test } from "./Base.t.sol";
 
 /// @notice Base test contract with common logic needed by all tests.
 

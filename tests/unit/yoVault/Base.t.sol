@@ -8,11 +8,11 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import { Users } from "./utils/Types.sol";
-import { Utils } from "./utils/Utils.sol";
-import { Events } from "./utils/Events.sol";
-import { Constants } from "./utils/Constants.sol";
-import { MockAuthority } from "./mocks/MockAuthority.sol";
+import { Users } from "../../utils/Types.sol";
+import { Utils } from "../../utils/Utils.sol";
+import { Events } from "../../utils/Events.sol";
+import { Constants } from "../../utils/Constants.sol";
+import { MockAuthority } from "../../mocks/MockAuthority.sol";
 
 import { yoVault } from "src/yoVault/yoVault.sol";
 

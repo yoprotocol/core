@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 
 import { Errors } from "src/libraries/Errors.sol";
 
-import { Base_Test } from "../../Base.t.sol";
+import { Base_Test } from "./Base.t.sol";
 import { MockTarget } from "../../mocks/MockTarget.sol";
 import { MockAuthority } from "../../mocks/MockAuthority.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

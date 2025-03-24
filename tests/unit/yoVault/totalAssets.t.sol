@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Base_Test } from "../../Base.t.sol";
+import { Base_Test } from "./Base.t.sol";
 
 contract TotalAssets_Unit_Concrete_Test is Base_Test {
     function setUp() public override {
