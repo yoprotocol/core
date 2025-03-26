@@ -39,4 +39,24 @@ library Errors {
 
     /// @notice Thrown when the requested amount of assets is zero
     error Escrow__AmountZero();
+
+    //============================== ctVault ===============================
+    error MaxQueueLengthExceeded();
+
+    error UnauthorizedStrategy(address strategy);
+
+    error DuplicatedStrategy(address strategy);
+
+    error CannotRemoveActiveStrategy(address strategy);
+
+    error StrategyAlreadyExists(address strategy);
+
+    error InvalidMaxAllocation();
+
+    error OnlyVault();
+
+    //============================== Chainlink ===============================
+    error ChainlinkInvalidPrice();
+    error ChainlinkIncompleteRound();
+    error ChainlinkStalePrice();
 }

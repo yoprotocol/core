@@ -3,6 +3,8 @@ name: "CI"
 env:
   BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
   API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
+  ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}
+
   FOUNDRY_PROFILE: "ci"
 
 on:
