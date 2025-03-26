@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+enum LendingActionType {
+    REPAY,
+    ADD_COLLATERAL,
+    REMOVE_COLLATERAL,
+    BORROW
+}
+
+struct LendingAction {
+    LendingActionType actionType;
+    uint256 amount;
+    uint256 adapterIndex;
+}
+
 struct StrategyConfig {
     /// @notice The max amount of assets allowed to be allocated to the strategy.
     uint248 maxAllocation;

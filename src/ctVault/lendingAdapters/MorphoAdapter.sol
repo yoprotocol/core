@@ -41,6 +41,63 @@ contract MorphoAdapter is BaseLendingAdapter {
         IERC20(marketParams.collateralToken).forceApprove(_morphoAddress, type(uint256).max);
     }
 
+    function getCollateral() public view override returns (uint256) {
+        Id marketId = marketParams.id();
+        bytes32[] memory slots = new bytes32[](1);
+        slots[0] = MorphoStorageLib.positionBorrowSharesAndCollateralSlot(marketId, address(this));
+        bytes32[] memory values = morpho.extSloads(slots);
+        uint256 totalCollateralAssets = uint256(values[0] >> 128);
+        return totalCollateralAssets;
+    }
+
+    function getBorrowLimit() public view override returns (uint256) {
+        Id marketId = marketParams.id();
+        Market memory market = morpho.market(marketId);
+        uint256 maxBorrowable = market.totalSupplyAssets - market.totalBorrowAssets;
+        return maxBorrowable;
+    }
+
+    function getBorrowed() public view override returns (uint256) {
+        uint256 totalBorrowAssets = morpho.expectedBorrowAssets(marketParams, address(this));
+        return totalBorrowAssets;
+    }
+
+    function getBorrowAPY() public view override returns (uint256) {
+        return _getBorrowAPY();
+    }
+
+    function getSupplyAPY() public view override returns (uint256) {
+        uint256 supplyApy = 0;
+
+        if (marketParams.irm != address(0)) {
+            Id marketId = marketParams.id();
+            Market memory market = morpho.market(marketId);
+
+            (uint256 totalSupplyAssets,, uint256 totalBorrowAssets,) = morpho.expectedMarketBalances(marketParams);
+            uint256 utilization = totalBorrowAssets == 0 ? 0 : totalBorrowAssets.wDivUp(totalSupplyAssets);
+            supplyApy = _getBorrowAPY().wMulDown(1 ether - market.fee).wMulDown(utilization);
+        }
+
+        return supplyApy;
+    }
+
+    function getHealthFactor() public view override returns (uint256) {
+        Id marketId = marketParams.id();
+
+        address user = address(this);
+        uint256 collateral = morpho.collateral(marketId, user);
+        uint256 collateralPrice = IOracle(marketParams.oracle).price();
+        uint256 borrowed = morpho.expectedBorrowAssets(marketParams, user);
+
+        uint256 maxBorrow = collateral.mulDivDown(collateralPrice, ORACLE_PRICE_SCALE).wMulDown(marketParams.lltv);
+
+        if (borrowed == 0) {
+            return type(uint256).max;
+        }
+
+        return maxBorrow.wDivDown(borrowed);
+    }
+
     function _addCollateral(uint256 _amount) internal override {
         IERC20(marketParams.collateralToken).safeTransferFrom(msg.sender, address(this), _amount);
         morpho.supplyCollateral(marketParams, _amount, address(this), hex"");
@@ -72,63 +129,6 @@ contract MorphoAdapter is BaseLendingAdapter {
         IERC20(marketParams.loanToken).safeTransferFrom(msg.sender, address(this), repaidAmount);
         (uint256 assetsRepaid,) = morpho.repay(marketParams, repaidAmount, 0, address(this), hex"");
         return assetsRepaid;
-    }
-
-    function getCollateral() public view override returns (uint256) {
-        Id marketId = marketParams.id();
-        bytes32[] memory slots = new bytes32[](1);
-        slots[0] = MorphoStorageLib.positionBorrowSharesAndCollateralSlot(marketId, address(this));
-        bytes32[] memory values = morpho.extSloads(slots);
-        uint256 totalCollateralAssets = uint256(values[0] >> 128);
-        return totalCollateralAssets;
-    }
-
-    function getBorrowLimit() public view override returns (uint256) {
-        Id marketId = marketParams.id();
-        Market memory market = morpho.market(marketId);
-        uint256 maxBorrowable = market.totalSupplyAssets - market.totalBorrowAssets;
-        return maxBorrowable;
-    }
-
-    function getBorrowed() public view override returns (uint256) {
-        uint256 totalBorrowAssets = morpho.expectedBorrowAssets(marketParams, address(this));
-        return totalBorrowAssets;
-    }
-
-    function getSupplyAPY() public view override returns (uint256) {
-        uint256 supplyApy = 0;
-
-        if (marketParams.irm != address(0)) {
-            Id marketId = marketParams.id();
-            Market memory market = morpho.market(marketId);
-
-            (uint256 totalSupplyAssets,, uint256 totalBorrowAssets,) = morpho.expectedMarketBalances(marketParams);
-            uint256 utilization = totalBorrowAssets == 0 ? 0 : totalBorrowAssets.wDivUp(totalSupplyAssets);
-            supplyApy = _getBorrowAPY().wMulDown(1 ether - market.fee).wMulDown(utilization);
-        }
-
-        return supplyApy;
-    }
-
-    function getBorrowAPY() public view override returns (uint256) {
-        return _getBorrowAPY();
-    }
-
-    function getHealthFactor() public view override returns (uint256) {
-        Id marketId = marketParams.id();
-
-        address user = address(this);
-        uint256 collateral = morpho.collateral(marketId, user);
-        uint256 collateralPrice = IOracle(marketParams.oracle).price();
-        uint256 borrowed = morpho.expectedBorrowAssets(marketParams, user);
-
-        uint256 maxBorrow = collateral.mulDivDown(collateralPrice, ORACLE_PRICE_SCALE).wMulDown(marketParams.lltv);
-
-        if (borrowed == 0) {
-            return type(uint256).max;
-        }
-
-        return maxBorrow.wDivDown(borrowed);
     }
 
     function _getBorrowAPY() internal view returns (uint256) {

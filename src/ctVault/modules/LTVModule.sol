@@ -13,31 +13,24 @@ abstract contract LTVModule {
 
     uint256 public constant LTV_SCALE = 1e18;
 
-    IOracle public immutable b;
-    uint256 public immutable bScale;
+    /// @notice The oracle for fetching the price of the borrowed asset
+    IOracle public immutable bOracle;
 
-    IOracle public immutable c;
-    uint256 public immutable cScale;
+    /// @notice The oracle for fetching the price of the collateral asset
+    IOracle public immutable cOracle;
 
-    constructor(address _borrowedAssetOracle, address _collateralAssetOracle) {
-        b = IOracle(_borrowedAssetOracle);
-        bScale = b.scale();
-
-        c = IOracle(_collateralAssetOracle);
-        cScale = b.scale();
+    constructor(address _bAssetOracle, address _cAssetOracle) {
+        bOracle = IOracle(_bAssetOracle);
+        cOracle = IOracle(_cAssetOracle);
     }
 
-    /// @notice Get the Loan-to-Value ratio scaled by 1e18, i.e. 1e18 = 100% LTV (utilization)
+    /// @dev Get the Loan-to-Value ratio scaled by 1e18, i.e. 1e18 = 100% LTV (utilization)
     /// @param _collateral The amount of collateral
     /// @param _borrowed The amount of borrowed assets
     /// @return The LTV ratio
-    function getLTV(uint256 _collateral, uint256 _borrowed) public view returns (uint256) {
-        uint256 bAssetPrice = b.price();
-        uint256 cAssetPrice = c.price();
-
-        uint256 borrowedValue = _borrowed.mulDiv(bAssetPrice, bScale);
-        uint256 collateralValue = _collateral.mulDiv(cAssetPrice, cScale);
-
+    function _getLTV(uint256 _collateral, uint256 _borrowed) internal view returns (uint256) {
+        uint256 borrowedValue = bOracle.getValue(_borrowed);
+        uint256 collateralValue = cOracle.getValue(_collateral);
         return borrowedValue.mulDiv(LTV_SCALE, collateralValue);
     }
 
@@ -53,15 +46,12 @@ abstract contract LTVModule {
         view
         returns (uint256 borrowAmount)
     {
-        uint256 cAssetPrice = c.price();
-        uint256 bAssetPrice = b.price();
-
-        // Calculate the collateral value in USD.
-        uint256 collateralValue = _collateral.mulDiv(cAssetPrice, cScale);
-        // Calculate the target borrowed value in USD based on the target LTV.
+        // get the collateral value in USD
+        uint256 collateralValue = cOracle.getValue(_collateral);
+        // get the target borrowed value in USD
         uint256 targetBorrowValue = collateralValue.mulDiv(_targetLTV, LTV_SCALE);
-        // Convert the target borrowed USD value into the borrowed asset amount.
-        borrowAmount = targetBorrowValue.mulDiv(bScale, bAssetPrice);
+        // get the amount of borrowed assets that corresponds to the target borrowed value
+        borrowAmount = bOracle.getAmount(targetBorrowValue);
         return borrowAmount;
     }
 }

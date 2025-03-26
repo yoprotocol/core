@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { StrategyConfig, LendingConfig } from "./Types.sol";
+import { StrategyConfig, LendingConfig, LendingAction, LendingActionType } from "./Types.sol";
 
 import { IctVault } from "./interfaces/IctVault.sol";
 import { ILendingAdapter } from "./interfaces/ILendingAdapter.sol";
@@ -32,11 +32,10 @@ contract ctVault is IctVault, LTVModule, ERC4626Upgradeable, Compatible, AuthUpg
     using Address for address;
     using SafeERC20 for IERC20;
 
+    /// @notice the maximum number of strategies that can be used
     uint256 public constant MAX_STRATEGIES = 20;
+    /// @notice the maximum number of lending protocols that can be used
     uint256 public constant MAX_LENDING_PROTOCOLS = 5;
-
-    /// @notice the target Loan-to-Value ratio for the vault
-    uint256 public vaultTargetLtv;
 
     /// @notice fee minted to the treasury and deducted from the earnings
     uint256 public performanceFee;
@@ -44,12 +43,13 @@ contract ctVault is IctVault, LTVModule, ERC4626Upgradeable, Compatible, AuthUpg
     /// @notice the amount of assets lost due to bad investments
     uint256 investedAssetsLost;
 
-    /// @notice stores the total borrowed assets (idle + invested) since the last update
+    /// @notice sum of all assets invested in the strategies since the last snapshot
     uint256 lastTotalInvestedAssets;
 
     /// @notice the address that receives the fees
     address public feeRecipient;
 
+    /// @notice whether to automatically invest the assets on deposit or not
     bool public autoInvest;
 
     /// @notice configuration of each strategy
@@ -57,14 +57,14 @@ contract ctVault is IctVault, LTVModule, ERC4626Upgradeable, Compatible, AuthUpg
     mapping(ILendingAdapter adapter => LendingConfig config) public lendingAdaptersConfig;
 
     /// @notice the list of lending protocols
-    ILendingAdapter[] lendingAdapters;
+    ILendingAdapter[] public lendingAdapters;
     // @notice the list of strategies used to invest the assets
-    address[] investQueue;
+    address[] public investQueue;
     // @notice the list of strategies used to divest the assets
-    address[] divestQueue;
+    address[] public divestQueue;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() LTVModule(address(0), address(0)) {
+    constructor(address _bOracle, address _cOracle) LTVModule(_bOracle, _cOracle) {
         _disableInitializers();
     }
 
@@ -192,8 +192,10 @@ contract ctVault is IctVault, LTVModule, ERC4626Upgradeable, Compatible, AuthUpg
         uint256 remaining = assets;
         for (uint256 i; i < lendingAdapters.length && remaining > 0; i++) {
             ILendingAdapter adapter = ILendingAdapter(lendingAdapters[i]);
+            LendingConfig memory config = lendingAdaptersConfig[adapter];
+
             uint256 currentCollateral = adapter.getCollateral();
-            uint256 maxAllowedCollateral = lendingAdaptersConfig[lendingAdapters[i]].maxAllocation;
+            uint256 maxAllowedCollateral = config.maxAllocation;
 
             // If the adapter is already full, skip it
             if (currentCollateral >= maxAllowedCollateral) {
@@ -204,9 +206,11 @@ contract ctVault is IctVault, LTVModule, ERC4626Upgradeable, Compatible, AuthUpg
             uint256 capacity = maxAllowedCollateral - currentCollateral;
             uint256 depositAmount = remaining > capacity ? capacity : remaining;
             remaining -= depositAmount;
+
+            IERC20(asset()).forceApprove(address(adapter), depositAmount);
             adapter.addCollateral(depositAmount);
 
-            uint256 desiredBorrowAmount = calculateBorrowAmount(depositAmount, vaultTargetLtv);
+            uint256 desiredBorrowAmount = calculateBorrowAmount(depositAmount, config.targetLTV);
             uint256 borrowLimit = adapter.getBorrowLimit();
 
             uint256 borrowAmount = desiredBorrowAmount > borrowLimit ? borrowLimit : desiredBorrowAmount;
@@ -214,5 +218,104 @@ contract ctVault is IctVault, LTVModule, ERC4626Upgradeable, Compatible, AuthUpg
         }
 
         if (autoInvest) { }
+    }
+
+    /// @inheritdoc IctVault
+    function getVaultLTV() public view returns (uint256) {
+        uint256 totalCollateral = 0;
+        uint256 totalBorrowed = 0;
+
+        for (uint256 i; i < lendingAdapters.length; i++) {
+            ILendingAdapter adapter = ILendingAdapter(lendingAdapters[i]);
+            uint256 borrowed = adapter.getBorrowed();
+            uint256 collateral = adapter.getCollateral();
+            totalBorrowed += borrowed;
+            totalCollateral += collateral;
+        }
+
+        return _getLTV(totalCollateral, totalBorrowed);
+    }
+
+    /// @inheritdoc IctVault
+    function getTotalCollateral() public view returns (uint256) {
+        uint256 totalCollateral = 0;
+        for (uint256 i; i < lendingAdapters.length; i++) {
+            ILendingAdapter adapter = ILendingAdapter(lendingAdapters[i]);
+            totalCollateral += adapter.getCollateral();
+        }
+        return totalCollateral;
+    }
+
+    /// @inheritdoc IctVault
+    function getTotalBorrowed() public view returns (uint256) {
+        uint256 totalBorrowed = 0;
+        for (uint256 i; i < lendingAdapters.length; i++) {
+            ILendingAdapter adapter = ILendingAdapter(lendingAdapters[i]);
+            totalBorrowed += adapter.getBorrowed();
+        }
+        return totalBorrowed;
+    }
+
+    /// @inheritdoc IctVault
+    function manageLendingPosition(LendingAction[] calldata actions) external requiresAuth {
+        for (uint256 i; i < actions.length; i++) {
+            LendingAction memory action = actions[i];
+            require(action.adapterIndex < lendingAdapters.length, Errors.InvalidAdapterIndex());
+
+            ILendingAdapter adapter = lendingAdapters[action.adapterIndex];
+            LendingConfig memory config = lendingAdaptersConfig[adapter];
+
+            // Repay
+            if (action.actionType == LendingActionType.REPAY) {
+                uint256 currentBorrowed = adapter.getBorrowed();
+                require(action.amount <= currentBorrowed, Errors.InvalidRepayAmount());
+
+                IERC20(asset()).forceApprove(address(adapter), action.amount);
+                adapter.repay(action.amount);
+            }
+            // Borrow
+            else if (action.actionType == LendingActionType.BORROW) {
+                uint256 borrowLimit = adapter.getBorrowLimit();
+                require(action.amount <= borrowLimit, Errors.BorrowLimitExceeded());
+
+                uint256 currentBorrowed = adapter.getBorrowed();
+                uint256 currentCollateral = adapter.getCollateral();
+                uint256 newBorrowed = currentBorrowed + action.amount;
+
+                uint256 newLTV = _getLTV(currentCollateral, newBorrowed);
+                require(newLTV >= config.minLTV, Errors.LTVTooLow());
+                require(newLTV <= config.maxLTV, Errors.LTVTooHigh());
+
+                adapter.borrow(action.amount);
+            }
+            // Add collateral
+            else if (action.actionType == LendingActionType.ADD_COLLATERAL) {
+                uint256 currentCollateral = adapter.getCollateral();
+                require(currentCollateral + action.amount <= config.maxAllocation, Errors.MaxAllocationExceeded());
+
+                IERC20(asset()).forceApprove(address(adapter), action.amount);
+                adapter.addCollateral(action.amount);
+            }
+            // Remove collateral
+            else if (action.actionType == LendingActionType.REMOVE_COLLATERAL) {
+                uint256 currentCollateral = adapter.getCollateral();
+                require(action.amount <= currentCollateral, Errors.InvalidCollateralAmount());
+
+                uint256 currentBorrowed = adapter.getBorrowed();
+                uint256 newCollateral = currentCollateral - action.amount;
+
+                uint256 newLTV = _getLTV(newCollateral, currentBorrowed);
+                require(newLTV <= config.maxLTV, Errors.LTVTooHigh());
+
+                adapter.removeCollateral(action.amount);
+            }
+        }
+
+        // TODO: shall we check the health factor here? shall we keep the desired health factor in the vault state?
+        for (uint256 i; i < lendingAdapters.length; i++) {
+            ILendingAdapter adapter = lendingAdapters[i];
+            uint256 healthFactor = adapter.getHealthFactor();
+            require(healthFactor >= 1e18, Errors.HealthFactorTooLow());
+        }
     }
 }

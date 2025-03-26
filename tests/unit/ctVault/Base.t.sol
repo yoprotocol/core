@@ -13,9 +13,13 @@ import { Utils } from "../../utils/Utils.sol";
 import { Events } from "../../utils/Events.sol";
 import { Constants } from "../../utils/Constants.sol";
 import { MockAuthority } from "../../mocks/MockAuthority.sol";
+import { IMorpho, Id, MarketParams, Market } from "@morpho-blue/interfaces/IMorpho.sol";
 
 import { ctVault } from "src/ctVault/ctVault.sol";
-import { ctVaultChainlinkOracle } from "src/ctVault/oracles/ctVaultChainlinkOracle.sol";
+import { LendingConfig } from "src/ctVault/Types.sol";
+import { ILendingAdapter } from "src/ctVault/interfaces/ILendingAdapter.sol";
+import { MorphoAdapter } from "src/ctVault/lendingAdapters/MorphoAdapter.sol";
+import { ctVaultAssetOracle } from "src/ctVault/oracles/ctVaultAssetOracle.sol";
 
 /// @notice Base test contract with common logic needed by all tests.
 
@@ -53,6 +57,7 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         vm.startPrank({ msgSender: users.admin });
 
         deployVault();
+        deployLendingAdapter();
 
         // Create users for testing.
         (users.bob, users.bobKey) = createUser("Bob");
@@ -80,10 +85,51 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         return (payable(user), key);
     }
 
-    function deployOracles() internal {
+    function deployOracles() internal returns (ctVaultAssetOracle usdcOracle, ctVaultAssetOracle cbBTCOracle) {
         address usdcUsdChainlinkFeed = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
-        ctVaultChainlinkOracle usdcOracle = new ctVaultChainlinkOracle(usdcUsdChainlinkFeed, usdcUsdChainlinkFeed);
+        usdcOracle = new ctVaultAssetOracle(usdcUsdChainlinkFeed, 6);
+        address cbBTCUsdChainlinkFeed = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c;
+        cbBTCOracle = new ctVaultAssetOracle(cbBTCUsdChainlinkFeed, 8);
     }
 
-    function deployVault() internal { }
+    function deployLendingAdapter() internal {
+        address morpho = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
+
+        MarketParams memory marketParams = MarketParams({
+            loanToken: address(usdc),
+            collateralToken: address(cbBTC),
+            oracle: 0xA6D6950c9F177F1De7f7757FB33539e3Ec60182a,
+            irm: 0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC,
+            lltv: 860_000_000_000_000_000
+        });
+        MorphoAdapter lendingAdapter = new MorphoAdapter(address(vault), morpho, marketParams);
+
+        vault.setLendingProtocol(
+            0,
+            lendingAdapter,
+            LendingConfig({
+                maxAllocation: 1_000_000_000, // 10 cbBTC
+                targetLTV: 600_000_000_000_000_000, // 60%
+                minLTV: 250_000_000_000_000_000, // 25%
+                maxLTV: 600_000_000_000_000_000 // 80%
+             })
+        );
+    }
+
+    function deployVault() internal {
+        (ctVaultAssetOracle usdcOracle, ctVaultAssetOracle cbBTCOracle) = deployOracles();
+
+        ctVault impl = new ctVault(address(usdcOracle), address(cbBTCOracle));
+
+        bytes memory data =
+            abi.encodeWithSelector(ctVault.initialize.selector, cbBTC, users.admin, "ctBTCVault", "ctBTC");
+
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(impl), users.admin, data);
+        vault = ctVault(payable(address(proxy)));
+
+        authority = new MockAuthority(users.admin, Authority(address(0)));
+        vault.setAuthority({ newAuthority: authority });
+
+        MockAuthority(address(authority)).setUserRole(users.admin, ADMIN_ROLE, true);
+    }
 }

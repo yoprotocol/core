@@ -40,6 +40,9 @@ library Errors {
     /// @notice Thrown when the requested amount of assets is zero
     error Escrow__AmountZero();
 
+    /// @notice Thrown when the requested amount of assets is zero
+    error ZeroAmount();
+
     //============================== ctVault ===============================
     error MaxQueueLengthExceeded();
 
@@ -54,6 +57,16 @@ library Errors {
     error InvalidMaxAllocation();
 
     error OnlyVault();
+
+    //============================== Lending Position Management ===============================
+    error InvalidAdapterIndex();
+    error InvalidRepayAmount();
+    error InvalidCollateralAmount();
+    error MaxAllocationExceeded();
+    error LTVTooLow();
+    error LTVTooHigh();
+    error BorrowLimitExceeded();
+    error HealthFactorTooLow();
 
     //============================== Chainlink ===============================
     error ChainlinkInvalidPrice();

@@ -3,8 +3,9 @@ pragma solidity 0.8.28;
 
 import { Errors } from "../../libraries/Errors.sol";
 import { Events } from "../../libraries/Events.sol";
+import { ILendingAdapter } from "../interfaces/ILendingAdapter.sol";
 
-abstract contract BaseLendingAdapter {
+abstract contract BaseLendingAdapter is ILendingAdapter {
     address public immutable vault;
 
     modifier onlyVault() {
@@ -17,21 +18,25 @@ abstract contract BaseLendingAdapter {
     }
 
     function addCollateral(uint256 _amount) external onlyVault {
+        require(_amount > 0, Errors.ZeroAmount());
         _addCollateral(_amount);
         emit Events.AddCollateral(_amount);
     }
 
     function removeCollateral(uint256 _amount) external onlyVault {
+        require(_amount > 0, Errors.ZeroAmount());
         _removeCollateral(_amount);
         emit Events.RemoveCollateral(_amount);
     }
 
     function borrow(uint256 _amount) external onlyVault {
+        require(_amount > 0, Errors.ZeroAmount());
         _borrow(_amount);
         emit Events.Borrow(_amount);
     }
 
     function repay(uint256 _amount) external onlyVault {
+        require(_amount > 0, Errors.ZeroAmount());
         uint256 repaid = _repay(_amount);
         emit Events.Repay(_amount, repaid);
     }
