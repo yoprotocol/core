@@ -8,6 +8,8 @@ library Errors {
     error Common__ZeroAddress();
     error Common__OnlyHarvester();
     error Common__MaxQueueLengthExceeded();
+    error Common__MaxSyncCooldownExceeded();
+    error Common__MaxPerformanceFeeExceeded();
 
     //============================== Investment Module ===============================
     error Investment__InvalidMaxAllocation();

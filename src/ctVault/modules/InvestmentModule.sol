@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import { console } from "forge-std/console.sol";
 
-import { CommonModule } from "./Common.sol";
+import { CommonModule } from "./CommonModule.sol";
 
 import { IStrategy } from "../interfaces/IStrategy.sol";
 

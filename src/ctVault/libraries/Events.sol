@@ -16,4 +16,9 @@ library Events {
     event LendingStrategyStats(
         uint256 collateral, uint256 borrowed, uint256 supplyAPY, uint256 borrowAPY, uint256 healthFactor
     );
+
+    event AutoInvestUpdated(bool autoInvest);
+    event SyncCooldownUpdated(uint256 syncCooldown);
+    event PerformanceFeeUpdated(uint256 performanceFee);
+    event FeeRecipientUpdated(address indexed lastFeeRecipient, address indexed feeRecipient);
 }

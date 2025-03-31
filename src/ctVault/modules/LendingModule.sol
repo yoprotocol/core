@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import { console } from "forge-std/console.sol";
 
-import { CommonModule } from "./Common.sol";
+import { CommonModule } from "./CommonModule.sol";
 
 import { IOracle } from "../interfaces/IOracle.sol";
 import { ILendingAdapter } from "../interfaces/ILendingAdapter.sol";

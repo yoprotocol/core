@@ -25,11 +25,11 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 // ╚██████╗   ██║    ╚████╔╝ ██║  ██║╚██████╔╝███████╗   ██║
 //  ╚═════╝   ╚═╝     ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝
 contract ctVault is
+    Compatible,
     AuthUpgradeable,
     LendingModule,
     InvestmentModule,
     ERC4626Upgradeable,
-    Compatible,
     PausableUpgradeable
 {
     using Math for uint256;
@@ -66,7 +66,16 @@ contract ctVault is
     }
 
     // TODO: max deposit must be the value of the remaining allocation across all lending strategies
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    )
+        internal
+        override
+        whenNotPaused
+    {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
         _sync();
@@ -84,6 +93,8 @@ contract ctVault is
         console.log("VAULT:: totalBorrowed", $.totalBorrowed);
     }
 
+    /// @notice Syncs the vault's state with the lending and investment modules.
+    /// @return True if the sync was successful, false otherwise.
     function sync() external returns (bool) {
         return _sync();
     }
