@@ -8,8 +8,6 @@ import { BaseChainlinkOracle } from "./BaseChainlinkOracle.sol";
 
 import { AggregatorV3Interface } from "../interfaces/AggregatorV3Interface.sol";
 
-import { Errors } from "../../libraries/Errors.sol";
-
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract ctVaultAssetOracle is BaseChainlinkOracle {

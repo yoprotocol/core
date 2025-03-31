@@ -41,10 +41,12 @@ struct CtVaultStorage {
 
 library CtVaultStorageLib {
     // keccak256(abi.encode(uint256(keccak256("erc7201.storage.ctVault")) - 1)) & ~bytes32(uint256(0xff))
+    // solhint-disable-next-line max-line-length, const-name-snakecase
     bytes32 private constant CtVaultStorageLocation = 0x153ab1664096712f403bc9f042f813c9650d7d4446c74ae26b3c39b846e10d00;
 
     /// @dev A function to return a pointer for the CtVaultStorageLocation.
     function _getCtVaultStorage() internal pure returns (CtVaultStorage storage $) {
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             $.slot := CtVaultStorageLocation
         }

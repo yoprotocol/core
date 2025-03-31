@@ -8,6 +8,7 @@
     "max-line-length": ["error", 120],
     "named-parameters-mapping": "warn",
     "contract-name-camelcase": "off",
+    "immutable-vars-naming": "off",
     "custom-errors": "off",
     "no-console": "off",
     "not-rely-on-time": "off",

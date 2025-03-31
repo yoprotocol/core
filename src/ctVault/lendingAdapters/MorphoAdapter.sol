@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import { BaseLendingAdapter } from "../lendingAdapters/BaseLendingAdapter.sol";
-import { Errors } from "../../libraries/Errors.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -26,7 +25,7 @@ contract MorphoAdapter is BaseLendingAdapter {
     using MorphoBalancesLib for IMorpho;
     using MarketParamsLib for MarketParams;
 
-    uint256 constant ORACLE_PRICE_SCALE = 1e36;
+    uint256 public constant ORACLE_PRICE_SCALE = 1e36;
 
     IMorpho public immutable morpho;
 

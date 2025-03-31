@@ -13,11 +13,10 @@ import { Utils } from "../../utils/Utils.sol";
 import { Events } from "../../utils/Events.sol";
 import { Constants } from "../../utils/Constants.sol";
 import { MockAuthority } from "../../mocks/MockAuthority.sol";
-import { IMorpho, Id, MarketParams, Market } from "@morpho-blue/interfaces/IMorpho.sol";
+import { MarketParams } from "@morpho-blue/interfaces/IMorpho.sol";
 
 import { ctVault } from "src/ctVault/ctVault.sol";
 import { LendingConfig } from "src/ctVault/Types.sol";
-import { ILendingAdapter } from "src/ctVault/interfaces/ILendingAdapter.sol";
 
 import { EulerStrategy } from "src/ctVault/strategies/EulerStrategy.sol";
 import { MorphoAdapter } from "src/ctVault/lendingAdapters/MorphoAdapter.sol";

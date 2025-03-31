@@ -3,19 +3,11 @@ pragma solidity 0.8.28;
 
 import { console } from "forge-std/console.sol";
 
-import { Strategy, LendingConfig, LendingAction, LendingActionType } from "./Types.sol";
-
-import { IctVault } from "./interfaces/IctVault.sol";
-import { IStrategy } from "./interfaces/IStrategy.sol";
-import { ILendingAdapter } from "./interfaces/ILendingAdapter.sol";
-
 import { LendingModule } from "./modules/LendingModule.sol";
 import { InvestmentModule } from "./modules/InvestmentModule.sol";
 import { Compatible } from "../base/Compatible.sol";
 import { AuthUpgradeable, Authority } from "../base/AuthUpgradable.sol";
 
-import { Errors } from "./libraries/Errors.sol";
-import { Events } from "./libraries/Events.sol";
 import { CtVaultStorage, CtVaultStorageLib } from "./libraries/Storage.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -33,7 +25,6 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 // ╚██████╗   ██║    ╚████╔╝ ██║  ██║╚██████╔╝███████╗   ██║
 //  ╚═════╝   ╚═╝     ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝
 contract ctVault is
-    IctVault,
     AuthUpgradeable,
     LendingModule,
     InvestmentModule,
