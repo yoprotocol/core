@@ -18,14 +18,14 @@ interface ILendingAdapter {
 
     /// @notice Borrows a specified amount of stablecoins against the collateral.
     /// @param _amount The amount of stablecoins to borrow.
-    function borrow(uint256 _amount) external;
+    function borrow(uint256 _amount) external returns (uint256);
 
     /// @notice Repays a specified amount of borrowed stablecoins.
     /// @param _amount The amount of stablecoins to repay.
-    function repay(uint256 _amount) external;
+    function repay(uint256 _amount) external returns (uint256);
 
     /// @notice Repays all outstanding borrowed stablecoins.
-    function repayAll() external;
+    function repayAll() external returns (uint256);
 
     /// @notice Triggers an on-chain event logging current lending stats.
     /// Stats include collateral, borrowed amounts, supply APY, borrow APY, and the health factor.

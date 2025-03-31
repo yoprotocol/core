@@ -42,4 +42,37 @@ library Errors {
 
     /// @notice Thrown when the requested amount of assets is zero
     error ZeroAmount();
+
+    //============================== ctVault ===============================
+    error MaxQueueLengthExceeded();
+
+    error UnauthorizedStrategy(address strategy);
+
+    error DuplicatedStrategy(address strategy);
+
+    error CannotRemoveActiveStrategy(address strategy);
+
+    error StrategyAlreadyExists(address strategy);
+
+    error InvalidMaxAllocation();
+
+    error StrategyHasAssets(address strategy);
+
+    error OnlyVault();
+    error OnlyHarvester();
+
+    //============================== Lending Position Management ===============================
+    error InvalidAdapterIndex();
+    error InvalidRepayAmount();
+    error InvalidCollateralAmount();
+    error MaxAllocationExceeded();
+    error LTVTooLow();
+    error LTVTooHigh();
+    error BorrowLimitExceeded();
+    error HealthFactorTooLow();
+
+    //============================== Chainlink ===============================
+    error ChainlinkInvalidPrice();
+    error ChainlinkIncompleteRound();
+    error ChainlinkStalePrice();
 }

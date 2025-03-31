@@ -33,17 +33,17 @@ interface IctVault {
     ///      - ADD_COLLATERAL: Add collateral
     ///      - REMOVE_COLLATERAL: Remove collateral
     /// @dev The function reverts if any of the actions is not valid.
-    function manageLendingPosition(LendingAction[] calldata _actions) external;
+    // function manageLendingPosition(LendingAction[] calldata _actions) external;
 
-    /// @notice Returns the total borrowed amount across all lending positions.
-    /// @return The total borrowed amount.
-    function getTotalBorrowed() external view returns (uint256);
+    // /// @notice Returns the total borrowed amount across all lending positions.
+    // /// @return The total borrowed amount.
+    // function getTotalBorrowed() external view returns (uint256);
 
-    /// @notice Returns the total collateral amount across all lending positions.
-    /// @return The total collateral amount.
-    function getTotalCollateral() external view returns (uint256);
+    // /// @notice Returns the total collateral amount across all lending positions.
+    // /// @return The total collateral amount.
+    // function getTotalCollateral() external view returns (uint256);
 
-    /// @notice Returns the vault's LTV.
-    /// @return The vault's LTV.
-    function getVaultLTV() external view returns (uint256);
+    // /// @notice Returns the vault's LTV.
+    // /// @return The vault's LTV.
+    // function getVaultLTV() external view returns (uint256);
 }

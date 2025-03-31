@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import { console } from "forge-std/console.sol";
+
 import { IOracle } from "../interfaces/IOracle.sol";
 import { BaseChainlinkOracle } from "./BaseChainlinkOracle.sol";
 
@@ -28,6 +30,8 @@ contract ctVaultAssetOracle is BaseChainlinkOracle {
 
     /// @inheritdoc IOracle
     function price() public view override returns (uint256) {
+        console.log("ORACLE:: price", uint256(getPrice(feed, feedDecimals)));
+
         return getPrice(feed, feedDecimals);
     }
 

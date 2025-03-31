@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Errors } from "../../libraries/Errors.sol";
-import { Events } from "../../libraries/Events.sol";
+import { Errors } from "../libraries/Errors.sol";
+import { Events } from "../libraries/Events.sol";
 import { ILendingAdapter } from "../interfaces/ILendingAdapter.sol";
 
 abstract contract BaseLendingAdapter is ILendingAdapter {
@@ -29,21 +29,24 @@ abstract contract BaseLendingAdapter is ILendingAdapter {
         emit Events.RemoveCollateral(_amount);
     }
 
-    function borrow(uint256 _amount) external onlyVault {
+    function borrow(uint256 _amount) external onlyVault returns (uint256) {
         require(_amount > 0, Errors.ZeroAmount());
-        _borrow(_amount);
+        uint256 borrowed = _borrow(_amount);
         emit Events.Borrow(_amount);
+        return borrowed;
     }
 
-    function repay(uint256 _amount) external onlyVault {
+    function repay(uint256 _amount) external onlyVault returns (uint256) {
         require(_amount > 0, Errors.ZeroAmount());
         uint256 repaid = _repay(_amount);
         emit Events.Repay(_amount, repaid);
+        return repaid;
     }
 
-    function repayAll() external onlyVault {
+    function repayAll() external onlyVault returns (uint256) {
         uint256 repaid = _repayAll();
         emit Events.Repay(type(uint256).max, repaid);
+        return repaid;
     }
 
     function logStats() external {

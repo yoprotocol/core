@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import { IOracle } from "../interfaces/IOracle.sol";
 import { AggregatorV3Interface } from "../interfaces/AggregatorV3Interface.sol";
 
-import { Errors } from "../../libraries/Errors.sol";
+import { Errors } from "../libraries/Errors.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 

@@ -18,6 +18,8 @@ import { IMorpho, Id, MarketParams, Market } from "@morpho-blue/interfaces/IMorp
 import { ctVault } from "src/ctVault/ctVault.sol";
 import { LendingConfig } from "src/ctVault/Types.sol";
 import { ILendingAdapter } from "src/ctVault/interfaces/ILendingAdapter.sol";
+
+import { EulerStrategy } from "src/ctVault/strategies/EulerStrategy.sol";
 import { MorphoAdapter } from "src/ctVault/lendingAdapters/MorphoAdapter.sol";
 import { ctVaultAssetOracle } from "src/ctVault/oracles/ctVaultAssetOracle.sol";
 
@@ -58,6 +60,7 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
 
         deployVault();
         deployLendingAdapter();
+        deployStrategies();
 
         // Create users for testing.
         (users.bob, users.bobKey) = createUser("Bob");
@@ -92,6 +95,12 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         cbBTCOracle = new ctVaultAssetOracle(cbBTCUsdChainlinkFeed, 8);
     }
 
+    function deployStrategies() internal {
+        address euler = 0x797DD80692c3b2dAdabCe8e30C07fDE5307D48a9;
+        EulerStrategy strategy = new EulerStrategy(address(vault), users.admin, euler);
+        vault.addStrategy(address(strategy), 100_000e6); // 100k USDC
+    }
+
     function deployLendingAdapter() internal {
         address morpho = 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
 
@@ -122,7 +131,7 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         ctVault impl = new ctVault(address(usdcOracle), address(cbBTCOracle));
 
         bytes memory data =
-            abi.encodeWithSelector(ctVault.initialize.selector, cbBTC, users.admin, "ctBTCVault", "ctBTC");
+            abi.encodeWithSelector(ctVault.initialize.selector, cbBTC, users.admin, "ctBTCVault", "ctBTC", usdc);
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(impl), users.admin, data);
         vault = ctVault(payable(address(proxy)));

@@ -109,6 +109,7 @@ contract MorphoAdapter is BaseLendingAdapter {
 
     function _borrow(uint256 _amount) internal override returns (uint256) {
         (uint256 assetsBorrowed,) = morpho.borrow(marketParams, _amount, 0, address(this), address(this));
+        IERC20(marketParams.loanToken).safeTransfer(msg.sender, assetsBorrowed);
         return assetsBorrowed;
     }
 

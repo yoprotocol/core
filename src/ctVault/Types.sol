@@ -14,7 +14,9 @@ struct LendingAction {
     uint256 adapterIndex;
 }
 
-struct StrategyConfig {
+struct Strategy {
+    /// @notice The amount of assets allocated to the strategy.
+    uint256 allocated;
     /// @notice The max amount of assets allowed to be allocated to the strategy.
     uint248 maxAllocation;
     /// @notice Whether the strategy is enabled for invest/divest or not.
