@@ -7,18 +7,37 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+interface IRewardDistributor {
+    function toggleOperator(address user, address operator) external;
+    function operators(address user, address operator) external view returns (uint256);
+}
+
 contract EulerStrategy is BaseStrategy {
     using SafeERC20 for IERC20;
 
-    IERC4626 public immutable euler;
-
     IERC20 private immutable _asset;
 
-    constructor(address _vault, address _owner, address _eulerAddress) BaseStrategy(_vault, _owner) {
+    IERC4626 public immutable euler;
+    IRewardDistributor public rewardDistributor;
+
+    constructor(
+        address _vault,
+        address _owner,
+        address _eulerAddress,
+        address _rewardDistributor
+    )
+        BaseStrategy(_vault, _owner)
+    {
         euler = IERC4626(_eulerAddress);
         _asset = IERC20(euler.asset());
 
         _asset.forceApprove(_eulerAddress, type(uint256).max);
+
+        rewardDistributor = IRewardDistributor(_rewardDistributor);
+    }
+
+    function setRewardDistributor(address _rewardDistributor) external onlyOwner {
+        rewardDistributor = IRewardDistributor(_rewardDistributor);
     }
 
     function _invest(uint256 _amount) internal override {
@@ -31,7 +50,9 @@ contract EulerStrategy is BaseStrategy {
     }
 
     function _claimRewards() internal override {
-        // euler does not have a claim function
+        if (rewardDistributor.operators(address(this), rewardsHarvester) == 0) {
+            rewardDistributor.toggleOperator(address(this), rewardsHarvester);
+        }
     }
 
     function totalAssets() public view override returns (uint256) {

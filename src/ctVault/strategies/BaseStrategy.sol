@@ -46,6 +46,7 @@ abstract contract BaseStrategy is IStrategy, Ownable2Step {
     }
 
     function setRewardsHarvester(address _harvester) public onlyOwner {
+        require(_harvester != address(0), Errors.Common__ZeroAddress());
         rewardsHarvester = _harvester;
     }
 

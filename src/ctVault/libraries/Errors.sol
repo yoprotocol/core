@@ -5,6 +5,7 @@ library Errors {
     //============================== Common ===============================
     error Common__OnlyVault();
     error Common__ZeroAmount();
+    error Common__ZeroAddress();
     error Common__OnlyHarvester();
     error Common__MaxQueueLengthExceeded();
 
