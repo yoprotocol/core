@@ -4,8 +4,9 @@ pragma solidity 0.8.28;
 import { Errors } from "../libraries/Errors.sol";
 
 import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { IStrategy } from "../interfaces/IStrategy.sol";
 
-abstract contract BaseStrategy is Ownable2Step {
+abstract contract BaseStrategy is IStrategy, Ownable2Step {
     address public immutable vault;
     address public rewardsHarvester;
 
@@ -14,22 +15,22 @@ abstract contract BaseStrategy is Ownable2Step {
     }
 
     modifier onlyVault() {
-        require(msg.sender == vault, Errors.OnlyVault());
+        require(msg.sender == vault, Errors.Common__OnlyVault());
         _;
     }
 
     modifier onlyHarvester() {
-        require(msg.sender == rewardsHarvester, Errors.OnlyHarvester());
+        require(msg.sender == rewardsHarvester, Errors.Common__OnlyHarvester());
         _;
     }
 
     function invest(uint256 _amount) public onlyVault {
-        require(_amount > 0, Errors.ZeroAmount());
+        require(_amount > 0, Errors.Common__ZeroAmount());
         _invest(_amount);
     }
 
     function divest(uint256 _amount) public onlyVault {
-        require(_amount > 0, Errors.ZeroAmount());
+        require(_amount > 0, Errors.Common__ZeroAmount());
         _divest(_amount);
     }
 

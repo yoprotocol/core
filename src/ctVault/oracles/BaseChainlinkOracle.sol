@@ -43,9 +43,9 @@ abstract contract BaseChainlinkOracle is IOracle {
         (uint80 roundId, int256 answer, uint256 startedAt,, uint80 answeredInRound) =
             AggregatorV3Interface(_feed).latestRoundData();
 
-        require(answer >= 0, Errors.ChainlinkInvalidPrice());
-        require(startedAt > 0, Errors.ChainlinkIncompleteRound());
-        require(answeredInRound >= roundId, Errors.ChainlinkStalePrice());
+        require(answer >= 0, Errors.Oracle__ChainlinkInvalidPrice());
+        require(startedAt > 0, Errors.Oracle__ChainlinkIncompleteRound());
+        require(answeredInRound >= roundId, Errors.Oracle__ChainlinkStalePrice());
 
         return scalePrice(uint256(answer), _feedDecimals);
     }

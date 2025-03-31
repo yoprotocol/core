@@ -19,7 +19,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         uint256 amount = 1 * 1e6;
         vault.deposit(amount, users.alice);
 
-        ILendingAdapter adapter = ILendingAdapter(vault.lendingAdapters(0));
+        ILendingAdapter adapter = ILendingAdapter(vault.lendingAdaptersAt(0));
 
         console.log("====================Lending Adapter============================");
         uint256 collateral = adapter.getCollateral();
@@ -42,7 +42,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         console.log("totalBorrowed", totalBorrowed);
 
         console.log("===================Strategy=============================");
-        IStrategy strategy = IStrategy(vault.investQueue(0));
+        IStrategy strategy = IStrategy(vault.investQueueAt(0));
 
         console.log("strategy", address(strategy));
         uint256 strategyTotalAssets = strategy.totalAssets();

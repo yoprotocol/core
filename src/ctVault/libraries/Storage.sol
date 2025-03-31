@@ -2,7 +2,9 @@
 pragma solidity 0.8.28;
 
 import { Strategy, LendingConfig } from "../Types.sol";
+import { IStrategy } from "../interfaces/IStrategy.sol";
 import { ILendingAdapter } from "../interfaces/ILendingAdapter.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @custom:storage-location erc7201.storage.ctVault
 struct CtVaultStorage {
@@ -24,17 +26,17 @@ struct CtVaultStorage {
     /// @notice the address that receives the fees
     address feeRecipient;
     /// @notice the address of the investment token
-    address investmentAsset;
+    IERC20 investmentAsset;
     /// @notice state of each strategy
-    mapping(address strategy => Strategy state) strategies;
+    mapping(IStrategy strategy => Strategy state) strategies;
     /// @notice configuration of each lending adapter
     mapping(ILendingAdapter adapter => LendingConfig config) lendingAdaptersConfig;
     /// @notice the list of lending protocols
     ILendingAdapter[] lendingAdapters;
     // @notice the list of strategies used to invest the assets
-    address[] investQueue;
+    IStrategy[] investQueue;
     // @notice the list of strategies used to divest the assets
-    address[] divestQueue;
+    IStrategy[] divestQueue;
 }
 
 library CtVaultStorageLib {

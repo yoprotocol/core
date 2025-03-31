@@ -1,21 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { CtVaultStorageLib } from "../libraries/Storage.sol";
-import { LendingAction, LendingActionType, LendingConfig } from "../Types.sol";
-import { AuthUpgradeable, Authority } from "../../base/AuthUpgradable.sol";
-import { CtVaultStorage, CtVaultStorageLib } from "../libraries/Storage.sol";
+import { console } from "forge-std/console.sol";
+
+import { CommonModule } from "./Common.sol";
+
 import { IOracle } from "../interfaces/IOracle.sol";
 import { ILendingAdapter } from "../interfaces/ILendingAdapter.sol";
+
 import { Errors } from "../libraries/Errors.sol";
+import { Events } from "../libraries/Events.sol";
+import { CtVaultStorage, CtVaultStorageLib } from "../libraries/Storage.sol";
+import { LendingAction, LendingActionType, LendingConfig } from "../Types.sol";
+
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { CommonModule } from "./Common.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 abstract contract LendingModule is CommonModule {
-    using SafeERC20 for IERC20;
     using Math for uint256;
+    using SafeERC20 for IERC20;
+
+    /// @notice the maximum number of lending protocols that can be used
+    uint256 public constant MAX_LENDING_PROTOCOLS = 5;
 
     uint256 public constant LTV_SCALE = 1e18;
 
@@ -30,12 +37,71 @@ abstract contract LendingModule is CommonModule {
         cOracle = IOracle(_cAssetOracle);
     }
 
-    function manageLendingPosition(LendingAction[] calldata actions) external requiresAuth {
+    /// @notice Sets a lending protocol for the vault.
+    /// @param _index The index of the lending protocol to set.
+    /// @param _adapter The lending adapter to set.
+    /// @param _config The configuration for the lending protocol.
+    function setLendingProtocol(
+        uint256 _index,
+        ILendingAdapter _adapter,
+        LendingConfig calldata _config
+    )
+        external
+        requiresAuth
+    {
+        if (_index >= MAX_LENDING_PROTOCOLS) {
+            revert Errors.Common__MaxQueueLengthExceeded();
+        }
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
-        for (uint256 i; i < actions.length; i++) {
-            LendingAction memory action = actions[i];
-            require(action.adapterIndex < $.lendingAdapters.length, Errors.InvalidAdapterIndex());
+        if (_index == $.lendingAdapters.length) {
+            $.lendingAdapters.push(_adapter);
+        } else {
+            $.lendingAdapters[_index] = _adapter;
+        }
+
+        $.lendingAdaptersConfig[_adapter] = _config;
+
+        emit Events.LendingAdapterUpdated(msg.sender, address(_adapter), _index);
+    }
+
+    /// @notice Returns the lending adapter at the given index
+    /// @param _index The index of the lending adapter to return
+    /// @return The lending adapter at the given index
+    function lendingAdaptersAt(uint256 _index) public view returns (address) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+        return address($.lendingAdapters[_index]);
+    }
+
+    /// @notice Returns the number of lending adapters
+    /// @return The number of lending adapters
+    function lendingAdaptersLength() public view returns (uint256) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+        return $.lendingAdapters.length;
+    }
+
+    /// @notice Returns the list of lending adapters
+    /// @return The list of lending adapters
+    function lendingAdapters() public view returns (ILendingAdapter[] memory) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+        return $.lendingAdapters;
+    }
+
+    /// @notice Manages a lending position by executing a series of actions.
+    /// @param _actions An array of actions to be executed.
+    /// @dev The actions are executed in the order they are provided in the array.
+    ///      Each action has:
+    ///      - REPAY: Repay a borrow
+    ///      - BORROW: Borrow an amount
+    ///      - ADD_COLLATERAL: Add collateral
+    ///      - REMOVE_COLLATERAL: Remove collateral
+    /// @dev The function reverts if any of the actions is not valid.
+    function manageLendingPosition(LendingAction[] calldata _actions) external requiresAuth {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+
+        for (uint256 i; i < _actions.length; i++) {
+            LendingAction memory action = _actions[i];
+            require(action.adapterIndex < $.lendingAdapters.length, Errors.Lending__InvalidAdapterIndex());
 
             ILendingAdapter adapter = $.lendingAdapters[action.adapterIndex];
             LendingConfig memory config = $.lendingAdaptersConfig[adapter];
@@ -43,7 +109,7 @@ abstract contract LendingModule is CommonModule {
             // Repay
             if (action.actionType == LendingActionType.REPAY) {
                 uint256 currentBorrowed = adapter.getBorrowed();
-                require(action.amount <= currentBorrowed, Errors.InvalidRepayAmount());
+                require(action.amount <= currentBorrowed, Errors.Lending__InvalidRepayAmount());
 
                 IERC20(_asset()).forceApprove(address(adapter), action.amount);
                 adapter.repay(action.amount);
@@ -51,22 +117,24 @@ abstract contract LendingModule is CommonModule {
             // Borrow
             else if (action.actionType == LendingActionType.BORROW) {
                 uint256 borrowLimit = adapter.getBorrowLimit();
-                require(action.amount <= borrowLimit, Errors.BorrowLimitExceeded());
+                require(action.amount <= borrowLimit, Errors.Lending__BorrowLimitExceeded());
 
                 uint256 currentBorrowed = adapter.getBorrowed();
                 uint256 currentCollateral = adapter.getCollateral();
                 uint256 newBorrowed = currentBorrowed + action.amount;
 
                 uint256 newLTV = _getLTV(currentCollateral, newBorrowed);
-                require(newLTV >= config.minLTV, Errors.LTVTooLow());
-                require(newLTV <= config.maxLTV, Errors.LTVTooHigh());
+                require(newLTV >= config.minLTV, Errors.Lending__LTVTooLow());
+                require(newLTV <= config.maxLTV, Errors.Lending__LTVTooHigh());
 
                 adapter.borrow(action.amount);
             }
             // Add collateral
             else if (action.actionType == LendingActionType.ADD_COLLATERAL) {
                 uint256 currentCollateral = adapter.getCollateral();
-                require(currentCollateral + action.amount <= config.maxAllocation, Errors.MaxAllocationExceeded());
+                require(
+                    currentCollateral + action.amount <= config.maxAllocation, Errors.Lending__MaxAllocationExceeded()
+                );
 
                 IERC20(_asset()).forceApprove(address(adapter), action.amount);
                 adapter.addCollateral(action.amount);
@@ -74,13 +142,13 @@ abstract contract LendingModule is CommonModule {
             // Remove collateral
             else if (action.actionType == LendingActionType.REMOVE_COLLATERAL) {
                 uint256 currentCollateral = adapter.getCollateral();
-                require(action.amount <= currentCollateral, Errors.InvalidCollateralAmount());
+                require(action.amount <= currentCollateral, Errors.Lending__InvalidCollateralAmount());
 
                 uint256 currentBorrowed = adapter.getBorrowed();
                 uint256 newCollateral = currentCollateral - action.amount;
 
                 uint256 newLTV = _getLTV(newCollateral, currentBorrowed);
-                require(newLTV <= config.maxLTV, Errors.LTVTooHigh());
+                require(newLTV <= config.maxLTV, Errors.Lending__LTVTooHigh());
 
                 adapter.removeCollateral(action.amount);
             }
@@ -90,18 +158,8 @@ abstract contract LendingModule is CommonModule {
         for (uint256 i; i < $.lendingAdapters.length; i++) {
             ILendingAdapter adapter = $.lendingAdapters[i];
             uint256 healthFactor = adapter.getHealthFactor();
-            require(healthFactor >= 1e18, Errors.HealthFactorTooLow());
+            require(healthFactor >= 1e18, Errors.Lending__HealthFactorTooLow());
         }
-    }
-
-    /// @dev Get the Loan-to-Value ratio scaled by 1e18, i.e. 1e18 = 100% LTV (utilization)
-    /// @param _collateral The amount of collateral
-    /// @param _borrowed The amount of borrowed assets
-    /// @return The LTV ratio
-    function _getLTV(uint256 _collateral, uint256 _borrowed) internal view returns (uint256) {
-        uint256 borrowedValue = bOracle.getValue(_borrowed);
-        uint256 collateralValue = cOracle.getValue(_collateral);
-        return borrowedValue.mulDiv(LTV_SCALE, collateralValue);
     }
 
     /// @notice Calculate the amount of borrowed assets based on the target LTV ratio
@@ -125,6 +183,8 @@ abstract contract LendingModule is CommonModule {
         return borrowAmount;
     }
 
+    /// @notice Returns the Loan-to-Value ratio of the vault
+    /// @return The LTV ratio
     function getVaultLTV() public view returns (uint256) {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
         uint256 _totalCollateral = 0;
@@ -141,6 +201,8 @@ abstract contract LendingModule is CommonModule {
         return _getLTV(_totalCollateral, _totalBorrowed);
     }
 
+    /// @notice Returns the total amount of collateral in the vault
+    /// @return The total collateral
     function getTotalCollateral() public view returns (uint256) {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
@@ -152,6 +214,8 @@ abstract contract LendingModule is CommonModule {
         return _totalCollateral;
     }
 
+    /// @notice Returns the total amount of borrowed assets in the vault
+    /// @return The total borrowed
     function getTotalBorrowed() public view returns (uint256) {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
@@ -161,5 +225,79 @@ abstract contract LendingModule is CommonModule {
             _totalBorrowed += adapter.getBorrowed();
         }
         return _totalBorrowed;
+    }
+
+    /// @dev Get the Loan-to-Value ratio scaled by 1e18, i.e. 1e18 = 100% LTV (utilization)
+    /// @param _collateral The amount of collateral
+    /// @param _borrowed The amount of borrowed assets
+    /// @return The LTV ratio
+    function _getLTV(uint256 _collateral, uint256 _borrowed) internal view returns (uint256) {
+        uint256 borrowedValue = bOracle.getValue(_borrowed);
+        uint256 collateralValue = cOracle.getValue(_collateral);
+        return borrowedValue.mulDiv(LTV_SCALE, collateralValue);
+    }
+
+    /// @dev Called when a deposit is made.
+    /// @param _amount The amount of assets to deposit.
+    /// @return totalBorrowed The total amount of borrowed assets.
+    /// @return totalCollateral The total amount of collateral.
+    function _onDeposit(uint256 _amount) internal returns (uint256 totalBorrowed, uint256 totalCollateral) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+
+        uint256 remaining = _amount;
+        console.log("VAULT:: total collateral", remaining);
+        for (uint256 i; i < $.lendingAdapters.length && remaining > 0; i++) {
+            ILendingAdapter adapter = ILendingAdapter($.lendingAdapters[i]);
+            LendingConfig memory config = $.lendingAdaptersConfig[adapter];
+
+            uint256 currentCollateral = adapter.getCollateral();
+            uint256 maxAllowedCollateral = config.maxAllocation;
+
+            // If the adapter is already full, skip it
+            if (currentCollateral >= maxAllowedCollateral) {
+                continue;
+            }
+
+            uint256 capacity;
+            uint256 collateralAmount;
+            unchecked {
+                capacity = maxAllowedCollateral - currentCollateral;
+                collateralAmount = remaining > capacity ? capacity : remaining;
+                remaining -= collateralAmount;
+            }
+            console.log("VAULT:: remaining to supply collateral", remaining);
+
+            IERC20(_asset()).forceApprove(address(adapter), collateralAmount);
+            totalCollateral += collateralAmount;
+            adapter.addCollateral(collateralAmount);
+
+            uint256 desiredBorrowAmount = calculateBorrowAmount(collateralAmount, config.targetLTV);
+            console.log("VAULT:: target LTV", config.targetLTV);
+            uint256 borrowLimit = adapter.getBorrowLimit();
+
+            uint256 borrowAmount = desiredBorrowAmount > borrowLimit ? borrowLimit : desiredBorrowAmount;
+            totalBorrowed += adapter.borrow(borrowAmount);
+            console.log("VAULT:: totalInvestAmount (borrowed)", totalBorrowed);
+        }
+        $.totalBorrowed = totalBorrowed;
+        $.totalCollateral = totalCollateral;
+    }
+
+    /// @dev Called when a sync is performed.
+    /// @return true if the sync was successful, false otherwise.
+    function _sync() internal virtual returns (bool) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+
+        uint256 totalBorrowed = 0;
+        uint256 totalCollateral = 0;
+
+        for (uint256 i; i < $.lendingAdapters.length; i++) {
+            ILendingAdapter adapter = ILendingAdapter($.lendingAdapters[i]);
+            totalBorrowed += adapter.getBorrowed();
+            totalCollateral += adapter.getCollateral();
+        }
+        $.totalBorrowed = totalBorrowed;
+        $.totalCollateral = totalCollateral;
+        return true;
     }
 }

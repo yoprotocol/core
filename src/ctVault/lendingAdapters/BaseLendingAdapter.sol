@@ -9,7 +9,7 @@ abstract contract BaseLendingAdapter is ILendingAdapter {
     address public immutable vault;
 
     modifier onlyVault() {
-        require(msg.sender == vault, Errors.OnlyVault());
+        require(msg.sender == vault, Errors.Common__OnlyVault());
         _;
     }
 
@@ -18,26 +18,26 @@ abstract contract BaseLendingAdapter is ILendingAdapter {
     }
 
     function addCollateral(uint256 _amount) external onlyVault {
-        require(_amount > 0, Errors.ZeroAmount());
+        require(_amount > 0, Errors.Common__ZeroAmount());
         _addCollateral(_amount);
         emit Events.AddCollateral(_amount);
     }
 
     function removeCollateral(uint256 _amount) external onlyVault {
-        require(_amount > 0, Errors.ZeroAmount());
+        require(_amount > 0, Errors.Common__ZeroAmount());
         _removeCollateral(_amount);
         emit Events.RemoveCollateral(_amount);
     }
 
     function borrow(uint256 _amount) external onlyVault returns (uint256) {
-        require(_amount > 0, Errors.ZeroAmount());
+        require(_amount > 0, Errors.Common__ZeroAmount());
         uint256 borrowed = _borrow(_amount);
         emit Events.Borrow(_amount);
         return borrowed;
     }
 
     function repay(uint256 _amount) external onlyVault returns (uint256) {
-        require(_amount > 0, Errors.ZeroAmount());
+        require(_amount > 0, Errors.Common__ZeroAmount());
         uint256 repaid = _repay(_amount);
         emit Events.Repay(_amount, repaid);
         return repaid;

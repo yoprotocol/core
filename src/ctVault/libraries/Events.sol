@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import { IStrategy } from "../interfaces/IStrategy.sol";
+
 library Events {
-    event UpdateInvestQueue(address indexed user, address[] queue);
-    event UpdateDivestQueue(address indexed user, address[] queue);
-    event StrategyAdded(address indexed user, address indexed strategy, uint248 maxAllocation);
+    event UpdateInvestQueue(address indexed user, IStrategy[] queue);
+    event UpdateDivestQueue(address indexed user, IStrategy[] queue);
+    event StrategyAdded(address indexed user, IStrategy indexed strategy, uint248 maxAllocation);
     event LendingAdapterUpdated(address indexed user, address indexed adapter, uint256 index);
 
     event AddCollateral(uint256 assets);
