@@ -23,8 +23,8 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         ILendingAdapter adapter = ILendingAdapter(vault.lendingAdaptersAt(0));
 
         console.log(block.number, block.timestamp);
-        vm.roll(block.number + 100);
-        vm.warp(block.timestamp + 100 * 12);
+        vm.roll(block.number + 500);
+        vm.warp(block.timestamp + 500 * 12);
         console.log(block.number, block.timestamp);
 
         console.log("====================Lending Adapter============================");
@@ -60,7 +60,9 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         uint256 strategyIdle = strategy.idle();
         console.log("strategyIdle", strategyIdle);
 
-        uint256 maxWithdraw = vault.maxWithdraw(users.alice);
+        uint256 totalAssetsSynced = vault.totalAssetsSynced();
+        uint256 shares = vault.balanceOf(users.alice);
+        uint256 maxWithdraw = shares.mulDiv(totalAssetsSynced + 1, vault.totalSupply() + 1, Math.Rounding.Floor);
         console.log("maxWithdraw", maxWithdraw);
 
         vault.withdraw(maxWithdraw, users.alice, users.alice);

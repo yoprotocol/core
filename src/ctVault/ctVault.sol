@@ -107,6 +107,23 @@ contract ctVault is
         return super.withdraw(assets, receiver, owner);
     }
 
+    function totalAssetsSynced() public view returns (uint256) {
+        uint256 invested = getTotalInvested();
+        (uint256 borrowed, uint256 collateral) = getState();
+        uint256 idleCollateral = super.totalAssets();
+
+        uint256 losses;
+        uint256 earnings;
+        if (invested > borrowed) {
+            earnings = invested - borrowed;
+            earnings = convertToCollateral(earnings);
+        } else {
+            losses = borrowed - invested;
+            losses = convertToCollateral(losses);
+        }
+        return collateral + idleCollateral + earnings - losses;
+    }
+
     function totalAssets() public view override returns (uint256) {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
