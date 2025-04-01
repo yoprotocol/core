@@ -78,9 +78,19 @@ contract ctVault is
         $.slippageTolerance = _slippageTolerance;
     }
 
+    function mint(uint256 shares, address receiver) public override whenNotPaused returns (uint256) {
+        _sync();
+        return super.mint(shares, receiver);
+    }
+
     function deposit(uint256 assets, address receiver) public override whenNotPaused returns (uint256) {
         _sync();
         return super.deposit(assets, receiver);
+    }
+
+    function redeem(uint256 shares, address receiver, address owner) public override whenNotPaused returns (uint256) {
+        _sync();
+        return super.redeem(shares, receiver, owner);
     }
 
     function withdraw(

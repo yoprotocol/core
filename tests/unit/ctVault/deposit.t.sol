@@ -78,6 +78,8 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
         // donate 1000 USDC to the strategy to harvest
         usdc.transfer(address(strategy), 1000e6);
+        vm.stopPrank();
+        vm.prank(users.admin);
         vault.harvest(true);
 
         borrowAmount = vault.getTotalBorrowed();
