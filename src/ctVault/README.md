@@ -1,10 +1,19 @@
-# ctVault (Cross-Token Vault)
+# ctVault (Carry Trade Vault)
 
 ## Overview
 
-ctVault is a sophisticated DeFi vault system that enables complex asset management operations including investment
-strategies, lending, and cross-token operations. It's designed to be a flexible and secure platform for managing digital
-assets across different protocols and strategies.
+ctVault is a sophisticated DeFi vault system that enables carry trade operations in the market. Carry trading is a
+strategy where an investor borrows funds at a lower interest rate and invests them in an asset that provides a higher
+return, profiting from the interest rate differential (the "carry").
+
+In the context of DeFi, carry trading typically involves:
+
+1. Borrowing assets at a lower interest rate from lending protocols
+2. Investing the borrowed assets in higher-yielding strategies
+3. Managing the interest rate spread while maintaining proper risk management
+
+The vault is designed to be a flexible and secure platform for executing carry trade strategies across different
+protocols and strategies, with built-in risk management and position monitoring.
 
 ## Architecture
 
