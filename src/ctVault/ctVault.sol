@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { console } from "forge-std/console.sol";
-
 import { Repayment } from "./Types.sol";
 import { ISwap } from "./interfaces/ISwap.sol";
 
@@ -69,33 +67,6 @@ contract ctVault is
         $.swapRouter = _swapRouter;
     }
 
-    function totalAssets() public view override returns (uint256) {
-        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
-
-        uint256 invested = $.totalInvested;
-        uint256 borrowed = $.totalBorrowed;
-        uint256 collateral = $.totalCollateral;
-        uint256 idleCollateral = super.totalAssets();
-
-        uint256 losses;
-        uint256 earnings;
-        if (invested > borrowed) {
-            earnings = invested - borrowed;
-            earnings = convertToCollateral(earnings);
-        } else {
-            losses = borrowed - invested;
-            losses = convertToCollateral(losses);
-        }
-
-        console.log("totalAssets:: invested", invested);
-        console.log("totalAssets:: borrowed", borrowed);
-        console.log("totalAssets:: losses", losses);
-        console.log("totalAssets:: earnings", earnings);
-        console.log("totalAssets:: collateral", collateral);
-        console.log("totalAssets:: idleCollateral", idleCollateral);
-        return collateral + idleCollateral + earnings - losses;
-    }
-
     function deposit(uint256 assets, address receiver) public override whenNotPaused returns (uint256) {
         _sync();
         return super.deposit(assets, receiver);
@@ -115,6 +86,27 @@ contract ctVault is
         return super.withdraw(assets, receiver, owner);
     }
 
+    function totalAssets() public view override returns (uint256) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+
+        uint256 invested = $.totalInvested;
+        uint256 borrowed = $.totalBorrowed;
+        uint256 collateral = $.totalCollateral;
+        uint256 idleCollateral = super.totalAssets();
+
+        uint256 losses;
+        uint256 earnings;
+        if (invested > borrowed) {
+            earnings = invested - borrowed;
+            earnings = convertToCollateral(earnings);
+        } else {
+            losses = borrowed - invested;
+            losses = convertToCollateral(losses);
+        }
+
+        return collateral + idleCollateral + earnings - losses;
+    }
+
     function _withdraw(
         address caller,
         address receiver,
@@ -126,28 +118,37 @@ contract ctVault is
         override
     {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
-
         uint256 idleCollateral = super.totalAssets();
-        console.log("VAULT::withdraw::idleCollateral", idleCollateral);
+
         // if idle assets is less than the requested assets, we must divest from strategies
         if (idleCollateral < assets) {
             Repayment[] memory repayments = _getRepayments(assets - idleCollateral);
 
             for (uint256 i; i < repayments.length; i++) {
                 Repayment memory repayment = repayments[i];
-                console.log("VAULT::withdraw::repayment", repayment.amount, repayment.collateral);
                 if (repayment.amount > 0) {
+                    // divest the assets from strategies to repay the debt
                     uint256 divested = InvestmentModule._divestUpTo(repayment.amount);
-                    console.log("VAULT::withdraw::divested", divested);
+
+                    // repay the debt
                     IERC20($.investmentAsset).forceApprove(address(repayment.adapter), divested);
-                    repayment.adapter.repay(divested);
-                    console.log("VAULT::withdraw::repayment.adapter.getCollateral()", repayment.collateral);
+                    uint256 repaid = repayment.adapter.repay(divested);
+                    $.totalBorrowed -= repaid;
+
+                    // remove the collateral
+                    $.totalCollateral -= repayment.collateral;
                     repayment.adapter.removeCollateral(repayment.collateral);
                 }
             }
         }
 
         super._withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    /// @notice Syncs the vault's state with the lending and investment modules.
+    /// @return True if the sync was successful, false otherwise.
+    function sync() external returns (bool) {
+        return _sync();
     }
 
     // TODO: max deposit must be the value of the remaining allocation across all lending strategies
@@ -161,16 +162,6 @@ contract ctVault is
         if ($.autoInvest) {
             InvestmentModule._investOnDeposit(totalBorrowed);
         }
-
-        console.log("VAULT:: totalInvested", $.totalInvested);
-        console.log("VAULT:: totalCollateral", $.totalCollateral);
-        console.log("VAULT:: totalBorrowed", $.totalBorrowed);
-    }
-
-    /// @notice Syncs the vault's state with the lending and investment modules.
-    /// @return True if the sync was successful, false otherwise.
-    function sync() external returns (bool) {
-        return _sync();
     }
 
     function _sync() internal override(InvestmentModule, LendingModule) returns (bool) {
@@ -184,6 +175,7 @@ contract ctVault is
         }
         $.lastSyncTimestamp = uint40(block.timestamp);
 
+        // we can sync the investment on a regular basis as it's not critical for the share price calculations
         return InvestmentModule._sync();
     }
 }

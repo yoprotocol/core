@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { console } from "forge-std/console.sol";
-
 import { CommonModule } from "./CommonModule.sol";
 
 import { IStrategy } from "../interfaces/IStrategy.sol";
 
-import { Strategy } from "../Types.sol";
+import { Strategy, InvestmentAction, InvestmentActionType } from "../Types.sol";
 import { Errors } from "../libraries/Errors.sol";
 import { Events } from "../libraries/Events.sol";
 import { CtVaultStorage, CtVaultStorageLib } from "../libraries/Storage.sol";
@@ -41,6 +39,58 @@ abstract contract InvestmentModule is CommonModule {
         $.investQueue = _investQueue;
 
         emit Events.UpdateInvestQueue(msg.sender, _investQueue);
+    }
+
+    /// @notice Manages investment positions by executing a series of actions.
+    /// @param _actions An array of actions to be executed.
+    /// @dev The actions are executed in the order they are provided in the array.
+    ///      Each action has:
+    ///      - INVEST: Invest an amount in a strategy
+    ///      - DIVEST: Divest an amount from a strategy
+    /// @dev The function reverts if any of the actions is not valid.
+    function manageInvestments(InvestmentAction[] calldata _actions) external requiresAuth {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+
+        for (uint256 i; i < _actions.length; i++) {
+            InvestmentAction memory action = _actions[i];
+            require(action.strategyIndex < $.investQueue.length, Errors.Investment__UnauthorizedStrategy(address(0)));
+
+            IStrategy strategy = $.investQueue[action.strategyIndex];
+            Strategy storage strategyState = $.strategies[strategy];
+
+            // Invest
+            if (action.actionType == InvestmentActionType.INVEST) {
+                require(strategyState.enabled, Errors.Investment__UnauthorizedStrategy(address(strategy)));
+                uint256 investCapacity = strategyState.maxAllocation - strategyState.allocated;
+                require(action.amount <= investCapacity, Errors.Investment__InvalidMaxAllocation());
+
+                $.investmentAsset.forceApprove(address(strategy), action.amount);
+                uint256 invested = strategy.invest(action.amount);
+                $.totalInvested += invested;
+                strategyState.allocated += invested;
+            }
+            // Divest
+            else if (action.actionType == InvestmentActionType.DIVEST) {
+                require(action.amount <= strategyState.allocated, Errors.Investment__NotEnoughAssets(address(strategy)));
+                uint256 divested = strategy.divest(action.amount);
+
+                // this can happen if sync was not called for a while
+                if ($.totalInvested < divested) {
+                    $.totalInvested = 0;
+                } else {
+                    $.totalInvested -= divested;
+                }
+
+                // this can happen if sync was not called for a while
+                if (strategyState.allocated < divested) {
+                    strategyState.allocated = 0;
+                } else {
+                    unchecked {
+                        strategyState.allocated -= divested;
+                    }
+                }
+            }
+        }
     }
 
     /// @notice Updates the divest queue by reordering based on the provided indices.
@@ -185,16 +235,18 @@ abstract contract InvestmentModule is CommonModule {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
         uint256 remaining = _amount;
-        console.log("VAULT::divestUpTo::remaining", remaining);
         for (uint256 i = 0; i < $.divestQueue.length && remaining > 0; i++) {
             IStrategy strategy = $.divestQueue[i];
             Strategy storage strategyState = $.strategies[strategy];
-            console.log("VAULT::divestUpTo::strategyState", strategyState.allocated);
+
             if (strategyState.allocated > 0) {
                 uint256 totalInvested = strategy.totalAssets();
-                console.log("VAULT::divestUpTo::totalInvested", totalInvested);
                 uint256 divestAmount = totalInvested > remaining ? remaining : totalInvested;
 
+                remaining -= divestAmount;
+                divested = strategy.divest(divestAmount);
+
+                // this can happen if sync was not called for a while
                 if (strategyState.allocated < divestAmount) {
                     strategyState.allocated = 0;
                 } else {
@@ -202,11 +254,15 @@ abstract contract InvestmentModule is CommonModule {
                         strategyState.allocated -= divestAmount;
                     }
                 }
-                divested += divestAmount;
-                remaining -= divestAmount;
-                console.log("VAULT::divestUpTo::divestAmount", divestAmount);
-                strategy.divest(divestAmount);
-                console.log("VAULT::divestUpTo::strategyState", strategyState.allocated);
+
+                // this can happen if sync was not called for a while
+                if ($.totalInvested < divestAmount) {
+                    $.totalInvested = 0;
+                } else {
+                    unchecked {
+                        $.totalInvested -= divestAmount;
+                    }
+                }
             }
         }
         return divested;
@@ -218,8 +274,8 @@ abstract contract InvestmentModule is CommonModule {
     function _investOnDeposit(uint256 _amount) internal returns (uint256) {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
-        uint256 remaining = _amount;
         uint256 totalInvested = 0;
+        uint256 remaining = _amount;
         for (uint256 i; i < $.investQueue.length; i++) {
             IStrategy strategy = $.investQueue[i];
             Strategy storage strategyState = $.strategies[strategy];
@@ -237,8 +293,6 @@ abstract contract InvestmentModule is CommonModule {
             uint256 invested = strategy.invest(investAmount);
             totalInvested += invested;
             strategyState.allocated += invested;
-
-            console.log("VAULT:: remainingToInvest", remaining);
         }
         $.totalInvested = totalInvested;
 
@@ -249,26 +303,27 @@ abstract contract InvestmentModule is CommonModule {
     /// @return True if the sync was successful.
     function _sync() internal virtual returns (bool) {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
-        uint256 totalInvested = 0;
 
+        uint256 totalInvested = 0;
         for (uint256 i; i < $.investQueue.length; i++) {
             IStrategy strategy = $.investQueue[i];
             Strategy memory strategyState = $.strategies[strategy];
-            totalInvested += strategy.totalAssets();
+            uint256 strategyInvestment = strategy.totalAssets();
+            totalInvested += strategyInvestment;
 
             uint256 gains = 0;
             uint256 losses = 0;
-            if (totalInvested != strategyState.allocated) {
+            if (strategyInvestment != strategyState.allocated) {
                 // we have gains (yield)
-                if (totalInvested > strategyState.allocated) {
+                if (strategyInvestment > strategyState.allocated) {
                     unchecked {
-                        gains += totalInvested - strategyState.allocated;
+                        gains += strategyInvestment - strategyState.allocated;
                     }
                 }
                 // we have losses
                 else {
                     unchecked {
-                        losses += strategyState.allocated - totalInvested;
+                        losses += strategyState.allocated - strategyInvestment;
                     }
                 }
                 strategyState.allocated += gains - losses;

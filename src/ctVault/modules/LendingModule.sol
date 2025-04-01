@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { console } from "forge-std/console.sol";
-
 import { CommonModule } from "./CommonModule.sol";
 
 import { IOracle } from "../interfaces/IOracle.sol";
@@ -112,8 +110,8 @@ abstract contract LendingModule is CommonModule {
                 require(action.amount <= currentBorrowed, Errors.Lending__InvalidRepayAmount());
 
                 IERC20(_asset()).forceApprove(address(adapter), action.amount);
-                $.totalBorrowed -= action.amount;
-                adapter.repay(action.amount);
+                uint256 repaid = adapter.repay(action.amount);
+                $.totalBorrowed -= repaid;
             }
             // Borrow
             else if (action.actionType == LendingActionType.BORROW) {
@@ -128,8 +126,8 @@ abstract contract LendingModule is CommonModule {
                 require(newLTV >= config.minLTV, Errors.Lending__LTVTooLow());
                 require(newLTV <= config.maxLTV, Errors.Lending__LTVTooHigh());
 
-                $.totalBorrowed += action.amount;
-                adapter.borrow(action.amount);
+                uint256 borrowed = adapter.borrow(action.amount);
+                $.totalBorrowed += borrowed;
             }
             // Add collateral
             else if (action.actionType == LendingActionType.ADD_COLLATERAL) {
@@ -273,8 +271,6 @@ abstract contract LendingModule is CommonModule {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
         uint256 remaining = _amount;
-        console.log("VAULT:: total collateral", remaining);
-
         Repayment[] memory repayments = new Repayment[]($.lendingAdapters.length);
         for (uint256 i; i < $.lendingAdapters.length && remaining > 0; i++) {
             ILendingAdapter adapter = ILendingAdapter($.lendingAdapters[i]);
@@ -306,7 +302,6 @@ abstract contract LendingModule is CommonModule {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
         uint256 remaining = _amount;
-        console.log("VAULT:: total collateral", remaining);
         for (uint256 i; i < $.lendingAdapters.length && remaining > 0; i++) {
             ILendingAdapter adapter = ILendingAdapter($.lendingAdapters[i]);
             LendingConfig memory config = $.lendingAdaptersConfig[adapter];
@@ -326,20 +321,18 @@ abstract contract LendingModule is CommonModule {
                 collateralAmount = remaining > capacity ? capacity : remaining;
                 remaining -= collateralAmount;
             }
-            console.log("VAULT:: remaining to supply collateral", remaining);
 
             IERC20(_asset()).forceApprove(address(adapter), collateralAmount);
             totalCollateral += collateralAmount;
             adapter.addCollateral(collateralAmount);
 
             uint256 desiredBorrowAmount = calculateBorrowAmount(collateralAmount, config.targetLTV);
-            console.log("VAULT:: target LTV", config.targetLTV);
             uint256 borrowLimit = adapter.getBorrowLimit();
 
             uint256 borrowAmount = desiredBorrowAmount > borrowLimit ? borrowLimit : desiredBorrowAmount;
             totalBorrowed += adapter.borrow(borrowAmount);
-            console.log("VAULT:: totalInvestAmount (borrowed)", totalBorrowed);
         }
+
         $.totalBorrowed = totalBorrowed;
         $.totalCollateral = totalCollateral;
     }

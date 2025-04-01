@@ -21,4 +21,5 @@ library Events {
     event SyncCooldownUpdated(uint256 syncCooldown);
     event PerformanceFeeUpdated(uint256 performanceFee);
     event FeeRecipientUpdated(address indexed lastFeeRecipient, address indexed feeRecipient);
+    event SwapRouterUpdated(address indexed oldRouter, address indexed newRouter);
 }

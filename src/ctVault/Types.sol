@@ -16,6 +16,17 @@ struct LendingAction {
     uint256 adapterIndex;
 }
 
+enum InvestmentActionType {
+    INVEST,
+    DIVEST
+}
+
+struct InvestmentAction {
+    InvestmentActionType actionType;
+    uint256 amount;
+    uint256 strategyIndex;
+}
+
 struct Repayment {
     uint256 amount;
     uint256 collateral;

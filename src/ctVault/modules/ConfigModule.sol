@@ -5,10 +5,19 @@ import { CommonModule } from "./CommonModule.sol";
 import { CtVaultStorage, CtVaultStorageLib } from "../libraries/Storage.sol";
 import { Errors } from "../libraries/Errors.sol";
 import { Events } from "../libraries/Events.sol";
+import { ISwap } from "../interfaces/ISwap.sol";
 
 abstract contract ConfigModule is CommonModule {
     uint96 internal constant MAX_PERFORMANCE_FEE = 0.5e18;
     uint40 internal constant MAX_SYNC_COOLDOWN = 5 days;
+
+    /// @notice Sets the swap router.
+    /// @param _swapRouter The address of the swap router.
+    function setSwapRouter(address _swapRouter) external requiresAuth {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+        emit Events.SwapRouterUpdated(address($.swapRouter), _swapRouter);
+        $.swapRouter = ISwap(_swapRouter);
+    }
 
     /// @notice Sets the address that receives the fees.
     /// @param _feeRecipient The address that receives the fees.

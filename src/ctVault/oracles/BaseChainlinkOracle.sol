@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { console } from "forge-std/console.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { AggregatorV3Interface } from "../interfaces/AggregatorV3Interface.sol";
 

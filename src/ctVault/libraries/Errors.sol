@@ -13,6 +13,7 @@ library Errors {
 
     //============================== Investment Module ===============================
     error Investment__InvalidMaxAllocation();
+    error Investment__NotEnoughAssets(address strategy);
     error Investment__StrategyHasAssets(address strategy);
     error Investment__DuplicatedStrategy(address strategy);
     error Investment__UnauthorizedStrategy(address strategy);
