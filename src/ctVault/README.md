@@ -1,0 +1,279 @@
+# ctVault (Cross-Token Vault)
+
+## Overview
+
+ctVault is a sophisticated DeFi vault system that enables complex asset management operations including investment
+strategies, lending, and cross-token operations. It's designed to be a flexible and secure platform for managing digital
+assets across different protocols and strategies.
+
+## Architecture
+
+### Core Components
+
+#### 1. Storage System
+
+The vault uses an ERC7201 storage system (`CtVaultStorage`) that manages:
+
+**Key Metrics:**
+
+- `totalInvested`: Total assets deployed in investment strategies
+- `totalBorrowed`: Total assets borrowed through lending protocols
+- `totalCollateral`: Total assets used as collateral
+- `harvestThreshold`: Minimum earnings required to trigger a harvest
+- `performanceFee`: Fee charged on earnings (up to 50%)
+- `syncCooldown`: Time between sync operations
+- `slippageTolerance`: Maximum allowed slippage for swaps (1% = 100)
+
+**Configuration:**
+
+- `autoInvest`: Whether to automatically invest deposited assets
+- `feeRecipient`: Address receiving system fees
+- `investmentAsset`: Primary investment token
+- `swapRouter`: Address for token swaps
+
+#### 2. Core Modules
+
+##### Investment Module
+
+- Maximum 20 investment strategies
+- Dynamic strategy allocation
+- Investment queue management
+- Strategy state tracking
+
+**Strategy Management:**
+
+- Each strategy has:
+  - `allocated`: Current asset allocation
+  - `maxAllocation`: Maximum allowed allocation
+  - `enabled`: Whether the strategy is active
+
+**Investment Actions:**
+
+- `INVEST`: Deploy assets to a strategy
+- `DIVEST`: Remove assets from a strategy
+- Queue-based execution system
+- Automatic allocation limits enforcement
+
+##### Lending Module
+
+- Maximum 5 lending protocols
+- LTV (Loan-to-Value) management
+- Health factor monitoring
+- Collateral management
+
+**Lending Configuration:**
+
+- `maxAllocation`: Maximum assets per protocol
+- `targetLTV`: Optimal loan-to-value ratio
+- `minLTV`: Minimum allowed LTV
+- `maxLTV`: Maximum allowed LTV
+
+**Lending Actions:**
+
+- `REPAY`: Repay borrowed assets
+- `ADD_COLLATERAL`: Add collateral
+- `REMOVE_COLLATERAL`: Remove collateral
+- `BORROW`: Borrow assets
+
+#### 3. Supporting Systems
+
+##### Oracle System
+
+- Chainlink-based price feeds
+- Supports multiple assets
+- Price scaling to 18 decimals
+- Safety checks for:
+  - Stale prices
+  - Invalid prices
+  - Incomplete rounds
+
+##### Swap Router
+
+- Uniswap integration
+- Exact token-to-token swaps
+- Slippage protection
+- Automatic token approvals
+
+## Operational Flow
+
+### 1. Asset Management
+
+```mermaid
+graph TD
+    subgraph User Actions
+        A[User Deposit] --> B[Vault Receives Assets]
+    end
+
+    subgraph Investment Decision
+        B --> C{Investment Mode}
+        C -->|Auto Invest| D[Strategy Queue]
+        C -->|Manual Invest| E[Manual Strategy Selection]
+        E --> D
+    end
+
+    subgraph Strategy Execution
+        D --> F[Strategy Validation]
+        F --> G[Allocation Check]
+        G --> H[Strategy Execution]
+        H --> I[Performance Tracking]
+    end
+
+    subgraph Risk Management
+        I --> J[Health Check]
+        J --> K[Allocation Limits]
+        K --> L[Update Strategy State]
+    end
+```
+
+### 2. Lending Operations
+
+```mermaid
+graph TD
+    subgraph Initial Request
+        A[Lending Request] --> B[Request Validation]
+        B --> C[Protocol Selection]
+    end
+
+    subgraph Risk Assessment
+        C --> D[Health Factor Check]
+        D --> E[LTV Verification]
+        E --> F[Collateral Requirements]
+    end
+
+    subgraph Position Management
+        F --> G[Position Creation]
+        G --> H[Collateral Management]
+        H --> I[Loan Execution]
+    end
+
+    subgraph Monitoring
+        I --> J[Position Monitoring]
+        J --> K[Health Factor Tracking]
+        K --> L[Risk Alerts]
+    end
+```
+
+### 3. Risk Management
+
+- Strategy allocation limits
+- LTV thresholds
+- Slippage protection
+- Sync cooldown periods
+- Performance fee caps
+
+## Security Features
+
+### 1. Access Control
+
+- Role-based authorization
+- Owner privileges
+- Operator permissions
+- Strategy-specific access
+
+### 2. Safety Mechanisms
+
+- Pausable functionality
+- Emergency stops
+- Health factor monitoring
+- Oracle validation
+
+### 3. Asset Protection
+
+- Slippage controls
+- Allocation limits
+- Collateral requirements
+- Fee management
+
+## Technical Implementation
+
+### 1. Error Handling
+
+**Key Error Categories:**
+
+- Common errors (zero amounts, unauthorized access)
+- Investment errors (allocation limits, strategy issues)
+- Lending errors (LTV limits, health factors)
+- Oracle errors (price feed issues)
+
+### 2. Events System
+
+- Investment queue updates
+- Strategy state changes
+- Fee updates
+- Router changes
+- Performance tracking
+
+### 3. Storage Optimization
+
+- Packed storage slots
+- Efficient data structures
+- Gas-optimized operations
+
+## Integration Points
+
+### 1. External Protocols
+
+- Morpho lending protocol
+- Uniswap for swaps
+- Chainlink for prices
+
+### 2. Strategy Interface
+
+**Required Methods:**
+
+- `invest()`
+- `divest()`
+- `getValue()`
+- `getAPY()`
+
+## Development Guidelines
+
+### 1. Adding New Strategies
+
+1. Implement IStrategy interface
+2. Extend BaseStrategy
+3. Configure allocation limits
+4. Add to investment queue
+
+### 2. Adding Lending Protocols
+
+1. Implement ILendingAdapter
+2. Configure LTV parameters
+3. Set up collateral management
+4. Add to lending adapters list
+
+### 3. Testing Requirements
+
+- Unit tests for all modules
+- Integration tests for protocols
+- Oracle price tests
+- Security tests
+
+## Directory Structure
+
+```
+ctVault/
+├── interfaces/         # Interface definitions
+├── libraries/         # Shared libraries and storage
+├── modules/          # Core vault modules
+│   ├── ConfigModule.sol
+│   ├── InvestmentModule.sol
+│   └── LendingModule.sol
+├── oracles/          # Price oracle implementations
+├── strategies/       # Investment strategy implementations
+├── lendingAdapters/  # Lending protocol adapters
+├── swap/            # Swap router implementations
+└── Types.sol        # Shared type definitions
+```
+
+## Dependencies
+
+- OpenZeppelin Contracts
+- Solmate Auth
+- Chainlink Price Feeds
+- Uniswap V3
+- Morpho Protocol
+
+## License
+
+MIT
