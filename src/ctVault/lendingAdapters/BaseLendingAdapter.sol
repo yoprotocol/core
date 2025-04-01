@@ -38,12 +38,18 @@ abstract contract BaseLendingAdapter is ILendingAdapter {
 
     function repay(uint256 _amount) external onlyVault returns (uint256) {
         require(_amount > 0, Errors.Common__ZeroAmount());
+
+        uint256 borrowed = getBorrowed();
+        if (_amount >= borrowed) {
+            return repayAll();
+        }
+
         uint256 repaid = _repay(_amount);
         emit Events.Repay(_amount, repaid);
         return repaid;
     }
 
-    function repayAll() external onlyVault returns (uint256) {
+    function repayAll() public onlyVault returns (uint256) {
         uint256 repaid = _repayAll();
         emit Events.Repay(type(uint256).max, repaid);
         return repaid;

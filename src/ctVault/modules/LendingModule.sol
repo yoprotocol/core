@@ -11,7 +11,7 @@ import { ILendingAdapter } from "../interfaces/ILendingAdapter.sol";
 import { Errors } from "../libraries/Errors.sol";
 import { Events } from "../libraries/Events.sol";
 import { CtVaultStorage, CtVaultStorageLib } from "../libraries/Storage.sol";
-import { LendingAction, LendingActionType, LendingConfig } from "../Types.sol";
+import { LendingAction, LendingActionType, LendingConfig, Repayment } from "../Types.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -112,6 +112,7 @@ abstract contract LendingModule is CommonModule {
                 require(action.amount <= currentBorrowed, Errors.Lending__InvalidRepayAmount());
 
                 IERC20(_asset()).forceApprove(address(adapter), action.amount);
+                $.totalBorrowed -= action.amount;
                 adapter.repay(action.amount);
             }
             // Borrow
@@ -127,6 +128,7 @@ abstract contract LendingModule is CommonModule {
                 require(newLTV >= config.minLTV, Errors.Lending__LTVTooLow());
                 require(newLTV <= config.maxLTV, Errors.Lending__LTVTooHigh());
 
+                $.totalBorrowed += action.amount;
                 adapter.borrow(action.amount);
             }
             // Add collateral
@@ -137,6 +139,7 @@ abstract contract LendingModule is CommonModule {
                 );
 
                 IERC20(_asset()).forceApprove(address(adapter), action.amount);
+                $.totalCollateral += action.amount;
                 adapter.addCollateral(action.amount);
             }
             // Remove collateral
@@ -150,6 +153,7 @@ abstract contract LendingModule is CommonModule {
                 uint256 newLTV = _getLTV(newCollateral, currentBorrowed);
                 require(newLTV <= config.maxLTV, Errors.Lending__LTVTooHigh());
 
+                $.totalCollateral -= action.amount;
                 adapter.removeCollateral(action.amount);
             }
         }
@@ -176,11 +180,20 @@ abstract contract LendingModule is CommonModule {
     {
         // get the collateral value in USD
         uint256 collateralValue = cOracle.getValue(_collateral);
-        // get the target borrowed value in USD
-        uint256 targetBorrowValue = collateralValue.mulDiv(_targetLTV, LTV_SCALE);
+        // get the target borrowed value in USD using ceilDiv to round up
+        uint256 targetBorrowValue = collateralValue.mulDiv(_targetLTV, LTV_SCALE, Math.Rounding.Ceil);
         // get the amount of borrowed assets that corresponds to the target borrowed value
         borrowAmount = bOracle.getAmount(targetBorrowValue);
         return borrowAmount;
+    }
+
+    /// @notice Convert a borrow amount to its equivalent collateral amount using price oracles
+    /// @param _borrowAmount The amount to convert (in borrow asset)
+    /// @return collateralAmount The equivalent amount in collateral asset
+    function convertToCollateral(uint256 _borrowAmount) public view returns (uint256 collateralAmount) {
+        uint256 borrowedValue = bOracle.getValue(_borrowAmount);
+        collateralAmount = cOracle.getAmount(borrowedValue);
+        return collateralAmount;
     }
 
     /// @notice Returns the Loan-to-Value ratio of the vault
@@ -235,6 +248,35 @@ abstract contract LendingModule is CommonModule {
         uint256 borrowedValue = bOracle.getValue(_borrowed);
         uint256 collateralValue = cOracle.getValue(_collateral);
         return borrowedValue.mulDiv(LTV_SCALE, collateralValue);
+    }
+
+    function _getRepayments(uint256 _amount) internal view returns (Repayment[] memory) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+
+        uint256 remaining = _amount;
+        console.log("VAULT:: total collateral", remaining);
+
+        Repayment[] memory repayments = new Repayment[]($.lendingAdapters.length);
+        for (uint256 i; i < $.lendingAdapters.length && remaining > 0; i++) {
+            ILendingAdapter adapter = ILendingAdapter($.lendingAdapters[i]);
+
+            uint256 currentBorrowed = adapter.getBorrowed();
+            uint256 currentCollateral = adapter.getCollateral();
+
+            // if the remaining amount is greater than the current collateral, we must repay the entire collateral
+            if (remaining >= currentCollateral) {
+                unchecked {
+                    remaining -= currentCollateral;
+                }
+                repayments[i] = Repayment({ amount: currentBorrowed, collateral: currentCollateral, adapter: adapter });
+            } else {
+                uint256 partialBorrowed = currentBorrowed.mulDiv(remaining, currentCollateral);
+                repayments[i] = Repayment({ amount: partialBorrowed, collateral: remaining, adapter: adapter });
+                remaining = 0;
+            }
+        }
+
+        return repayments;
     }
 
     /// @dev Called when a deposit is made.

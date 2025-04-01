@@ -181,6 +181,37 @@ abstract contract InvestmentModule is CommonModule {
         return $.divestQueue;
     }
 
+    function _divestUpTo(uint256 _amount) internal returns (uint256 divested) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+
+        uint256 remaining = _amount;
+        console.log("VAULT::divestUpTo::remaining", remaining);
+        for (uint256 i = 0; i < $.divestQueue.length && remaining > 0; i++) {
+            IStrategy strategy = $.divestQueue[i];
+            Strategy storage strategyState = $.strategies[strategy];
+            console.log("VAULT::divestUpTo::strategyState", strategyState.allocated);
+            if (strategyState.allocated > 0) {
+                uint256 totalInvested = strategy.totalAssets();
+                console.log("VAULT::divestUpTo::totalInvested", totalInvested);
+                uint256 divestAmount = totalInvested > remaining ? remaining : totalInvested;
+
+                if (strategyState.allocated < divestAmount) {
+                    strategyState.allocated = 0;
+                } else {
+                    unchecked {
+                        strategyState.allocated -= divestAmount;
+                    }
+                }
+                divested += divestAmount;
+                remaining -= divestAmount;
+                console.log("VAULT::divestUpTo::divestAmount", divestAmount);
+                strategy.divest(divestAmount);
+                console.log("VAULT::divestUpTo::strategyState", strategyState.allocated);
+            }
+        }
+        return divested;
+    }
+
     /// @dev Invests the available assets in the strategies. Called when a deposit is made.
     /// @param _amount The amount of assets to invest.
     /// @return The total amount of assets invested.
@@ -191,7 +222,7 @@ abstract contract InvestmentModule is CommonModule {
         uint256 totalInvested = 0;
         for (uint256 i; i < $.investQueue.length; i++) {
             IStrategy strategy = $.investQueue[i];
-            Strategy memory strategyState = $.strategies[strategy];
+            Strategy storage strategyState = $.strategies[strategy];
 
             // If the strategy is not enabled, skip it
             if (!strategyState.enabled) {
@@ -203,9 +234,9 @@ abstract contract InvestmentModule is CommonModule {
             remaining -= investAmount;
 
             $.investmentAsset.forceApprove(address(strategy), investAmount);
-            strategy.invest(investAmount);
-            totalInvested += investAmount;
-            strategyState.allocated += investAmount;
+            uint256 invested = strategy.invest(investAmount);
+            totalInvested += invested;
+            strategyState.allocated += invested;
 
             console.log("VAULT:: remainingToInvest", remaining);
         }

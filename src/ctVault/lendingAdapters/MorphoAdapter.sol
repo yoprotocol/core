@@ -103,12 +103,11 @@ contract MorphoAdapter is BaseLendingAdapter {
     }
 
     function _removeCollateral(uint256 _amount) internal override {
-        morpho.withdrawCollateral(marketParams, _amount, address(this), address(this));
+        morpho.withdrawCollateral(marketParams, _amount, address(this), vault);
     }
 
     function _borrow(uint256 _amount) internal override returns (uint256) {
-        (uint256 assetsBorrowed,) = morpho.borrow(marketParams, _amount, 0, address(this), address(this));
-        IERC20(marketParams.loanToken).safeTransfer(msg.sender, assetsBorrowed);
+        (uint256 assetsBorrowed,) = morpho.borrow(marketParams, _amount, 0, address(this), vault);
         return assetsBorrowed;
     }
 
@@ -123,11 +122,11 @@ contract MorphoAdapter is BaseLendingAdapter {
 
         (,, uint256 totalBorrowAssets, uint256 totalBorrowShares) = morpho.expectedMarketBalances(marketParams);
 
-        uint256 borrowShares = morpho.position(marketId, msg.sender).borrowShares;
+        uint256 borrowShares = morpho.position(marketId, address(this)).borrowShares;
         uint256 repaidAmount = borrowShares.toAssetsUp(totalBorrowAssets, totalBorrowShares);
 
         IERC20(marketParams.loanToken).safeTransferFrom(msg.sender, address(this), repaidAmount);
-        (uint256 assetsRepaid,) = morpho.repay(marketParams, repaidAmount, 0, address(this), hex"");
+        (uint256 assetsRepaid,) = morpho.repay(marketParams, 0, borrowShares, address(this), hex"");
         return assetsRepaid;
     }
 

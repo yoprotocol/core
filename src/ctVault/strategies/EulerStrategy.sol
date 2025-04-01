@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import { console } from "forge-std/console.sol";
 import { BaseStrategy } from "./BaseStrategy.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -40,13 +41,16 @@ contract EulerStrategy is BaseStrategy {
         rewardDistributor = IRewardDistributor(_rewardDistributor);
     }
 
-    function _invest(uint256 _amount) internal override {
+    function _invest(uint256 _amount) internal override returns (uint256) {
         _asset.safeTransferFrom(msg.sender, address(this), _amount);
-        euler.deposit(_amount, address(this));
+        uint256 shares = euler.deposit(_amount, address(this));
+        return euler.convertToAssets(shares);
     }
 
-    function _divest(uint256 _amount) internal override {
-        euler.withdraw(_amount, vault, msg.sender);
+    // TODO: check if this conversion is correct
+    function _divest(uint256 _amount) internal override returns (uint256) {
+        uint256 shares = euler.withdraw(_amount, vault, address(this));
+        return euler.convertToAssets(shares);
     }
 
     function _claimRewards() internal override {

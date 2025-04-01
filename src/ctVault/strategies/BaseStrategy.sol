@@ -6,7 +6,12 @@ import { Errors } from "../libraries/Errors.sol";
 import { Ownable, Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import { IStrategy } from "../interfaces/IStrategy.sol";
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 abstract contract BaseStrategy is IStrategy, Ownable2Step {
+    using SafeERC20 for IERC20;
+
     address public immutable vault;
     address public rewardsHarvester;
 
@@ -24,14 +29,39 @@ abstract contract BaseStrategy is IStrategy, Ownable2Step {
         _;
     }
 
-    function invest(uint256 _amount) public onlyVault {
+    function invest(uint256 _amount) public onlyVault returns (uint256) {
         require(_amount > 0, Errors.Common__ZeroAmount());
-        _invest(_amount);
+        return _invest(_amount);
     }
 
-    function divest(uint256 _amount) public onlyVault {
+    function divest(uint256 _amount) public onlyVault returns (uint256) {
         require(_amount > 0, Errors.Common__ZeroAmount());
-        _divest(_amount);
+
+        uint256 idleAssets = idle();
+        uint256 divestAmount = _amount;
+
+        // if idle assets are less than the divestment, we need to divest the difference
+        if (idleAssets < _amount) {
+            divestAmount = _amount - idleAssets;
+        }
+        // if idle assets are enough to cover the divestment, we don't need to divest
+        else {
+            divestAmount = 0;
+            // we update the idle assets to the amount of the divestment to avoid divesting more than requested
+            idleAssets = _amount;
+        }
+
+        uint256 divested;
+        if (divestAmount > 0) {
+            divested = _divest(divestAmount);
+        }
+
+        // if there are idle assets, we transfer them to the vault
+        if (idleAssets > 0) {
+            IERC20(asset()).safeTransfer(vault, idleAssets);
+        }
+
+        return divested + idleAssets;
     }
 
     function divestAll() public onlyVault {
@@ -56,6 +86,6 @@ abstract contract BaseStrategy is IStrategy, Ownable2Step {
     function totalInvested() public view virtual returns (uint256);
 
     function _claimRewards() internal virtual;
-    function _invest(uint256 _amount) internal virtual;
-    function _divest(uint256 _amount) internal virtual;
+    function _invest(uint256 _amount) internal virtual returns (uint256);
+    function _divest(uint256 _amount) internal virtual returns (uint256);
 }

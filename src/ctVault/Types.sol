@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import { ILendingAdapter } from "./interfaces/ILendingAdapter.sol";
+
 enum LendingActionType {
     REPAY,
     ADD_COLLATERAL,
@@ -12,6 +14,12 @@ struct LendingAction {
     LendingActionType actionType;
     uint256 amount;
     uint256 adapterIndex;
+}
+
+struct Repayment {
+    uint256 amount;
+    uint256 collateral;
+    ILendingAdapter adapter;
 }
 
 struct Strategy {

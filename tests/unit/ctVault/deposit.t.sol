@@ -17,9 +17,15 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
     function test_deposit_success() public {
         uint256 amount = 1 * 1e6;
+
         vault.deposit(amount, users.alice);
 
         ILendingAdapter adapter = ILendingAdapter(vault.lendingAdaptersAt(0));
+
+        console.log(block.number, block.timestamp);
+        vm.roll(block.number + 100);
+        vm.warp(block.timestamp + 100 * 12);
+        console.log(block.number, block.timestamp);
 
         console.log("====================Lending Adapter============================");
         uint256 collateral = adapter.getCollateral();
@@ -43,6 +49,8 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
         console.log("===================Strategy=============================");
         IStrategy strategy = IStrategy(vault.investQueueAt(0));
+        // donate 1 USDC to the strategy
+        usdc.transfer(address(strategy), 1e6);
 
         console.log("strategy", address(strategy));
         uint256 strategyTotalAssets = strategy.totalAssets();
@@ -53,5 +61,16 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
         uint256 strategyIdle = strategy.idle();
         console.log("strategyIdle", strategyIdle);
+
+        uint256 maxWithdraw = vault.maxWithdraw(users.alice);
+        console.log("maxWithdraw", maxWithdraw);
+
+        vault.withdraw(maxWithdraw, users.alice, users.alice);
+
+        strategyIdle = strategy.idle();
+        console.log("strategyIdle", strategyIdle);
+
+        strategyInvested = strategy.totalInvested();
+        console.log("strategyInvested", strategyInvested);
     }
 }

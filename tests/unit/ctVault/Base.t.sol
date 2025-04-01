@@ -18,8 +18,11 @@ import { MarketParams } from "@morpho-blue/interfaces/IMorpho.sol";
 import { ctVault } from "src/ctVault/ctVault.sol";
 import { LendingConfig } from "src/ctVault/Types.sol";
 
+import { IOracle } from "src/ctVault/interfaces/IOracle.sol";
+import { UniswapRouter } from "src/ctVault/swap/UniswapRouter.sol";
 import { EulerStrategy } from "src/ctVault/strategies/EulerStrategy.sol";
 import { MorphoAdapter } from "src/ctVault/lendingAdapters/MorphoAdapter.sol";
+import { FixedPriceOracle } from "src/ctVault/oracles/FixedPriceOracle.sol";
 import { ctVaultAssetOracle } from "src/ctVault/oracles/ctVaultAssetOracle.sol";
 
 /// @notice Base test contract with common logic needed by all tests.
@@ -87,9 +90,8 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         return (payable(user), key);
     }
 
-    function deployOracles() internal returns (ctVaultAssetOracle usdcOracle, ctVaultAssetOracle cbBTCOracle) {
-        address usdcUsdChainlinkFeed = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
-        usdcOracle = new ctVaultAssetOracle(usdcUsdChainlinkFeed, 6);
+    function deployOracles() internal returns (IOracle usdcOracle, IOracle cbBTCOracle) {
+        usdcOracle = new FixedPriceOracle(1e18, 6);
         address cbBTCUsdChainlinkFeed = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c;
         cbBTCOracle = new ctVaultAssetOracle(cbBTCUsdChainlinkFeed, 8);
     }
@@ -125,13 +127,23 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         );
     }
 
+    function deploySwapRouter() internal returns (UniswapRouter) {
+        uint24 fee = 3000;
+        address uniswapV3Quoter = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
+        address uniswapV3Router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+        return new UniswapRouter(fee, uniswapV3Quoter, uniswapV3Router);
+    }
+
     function deployVault() internal {
-        (ctVaultAssetOracle usdcOracle, ctVaultAssetOracle cbBTCOracle) = deployOracles();
+        (IOracle usdcOracle, IOracle cbBTCOracle) = deployOracles();
 
         ctVault impl = new ctVault(address(usdcOracle), address(cbBTCOracle));
 
-        bytes memory data =
-            abi.encodeWithSelector(ctVault.initialize.selector, cbBTC, users.admin, "ctBTCVault", "ctBTC", usdc);
+        UniswapRouter swapRouter = deploySwapRouter();
+
+        bytes memory data = abi.encodeWithSelector(
+            ctVault.initialize.selector, cbBTC, users.admin, "ctBTCVault", "ctBTC", usdc, swapRouter
+        );
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(impl), users.admin, data);
         vault = ctVault(payable(address(proxy)));
