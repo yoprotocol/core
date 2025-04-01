@@ -17,13 +17,17 @@ struct CtVaultStorage {
     uint256 totalBorrowed;
     /// @notice total amount of assets collateralized
     uint256 totalCollateral;
-    /// @dev Packed in a single storage slot (96 + 40 + 40 + 8 = 184 bits)
+    /// @notice the minimum amount of earnings required to trigger a harvest
+    uint256 harvestThreshold;
+    /// @dev Packed in a single storage slot (96 + 40 + 40 + 40 + 8 = 224 bits)
     /// @notice fee minted to the treasury and deducted from the earnings
     uint96 performanceFee;
     /// @notice cooldown period for the sync function
     uint40 syncCooldown;
     /// @notice timestamp of the last sync
     uint40 lastSyncTimestamp;
+    /// @notice the maximum allowed slippage when swapping earnings (1% = 100)
+    uint40 slippageTolerance;
     /// @notice whether to automatically invest the assets on deposit or not
     bool autoInvest;
     /// @notice the address that receives the fees

@@ -20,6 +20,9 @@ library Events {
     event AutoInvestUpdated(bool autoInvest);
     event SyncCooldownUpdated(uint256 syncCooldown);
     event PerformanceFeeUpdated(uint256 performanceFee);
-    event FeeRecipientUpdated(address indexed lastFeeRecipient, address indexed feeRecipient);
+    event HarvestThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+    event SlippageToleranceUpdated(uint256 oldTolerance, uint256 newTolerance);
     event SwapRouterUpdated(address indexed oldRouter, address indexed newRouter);
+    event Harvest(uint256 earnings, uint256 harvestedAmount, bool addToCollateral);
+    event FeeRecipientUpdated(address indexed lastFeeRecipient, address indexed feeRecipient);
 }

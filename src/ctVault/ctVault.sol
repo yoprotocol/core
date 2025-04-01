@@ -4,10 +4,14 @@ pragma solidity 0.8.28;
 import { Repayment } from "./Types.sol";
 import { ISwap } from "./interfaces/ISwap.sol";
 
-import { LendingModule } from "./modules/LendingModule.sol";
-import { InvestmentModule } from "./modules/InvestmentModule.sol";
 import { Compatible } from "../base/Compatible.sol";
 import { AuthUpgradeable, Authority } from "../base/AuthUpgradable.sol";
+
+import { ConfigModule } from "./modules/ConfigModule.sol";
+import { LendingModule } from "./modules/LendingModule.sol";
+import { InvestmentModule } from "./modules/InvestmentModule.sol";
+
+import { Events } from "./libraries/Events.sol";
 import { CtVaultStorage, CtVaultStorageLib } from "./libraries/Storage.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -27,6 +31,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 contract ctVault is
     Compatible,
     AuthUpgradeable,
+    ConfigModule,
     LendingModule,
     InvestmentModule,
     ERC4626Upgradeable,
@@ -50,7 +55,10 @@ contract ctVault is
         string memory _name,
         string memory _symbol,
         IERC20 _investmentAsset,
-        ISwap _swapRouter
+        ISwap _swapRouter,
+        uint256 _harvestThreshold,
+        uint40 _syncCooldown,
+        uint40 _slippageTolerance
     )
         public
         initializer
@@ -65,6 +73,9 @@ contract ctVault is
         $.autoInvest = true;
         $.investmentAsset = _investmentAsset;
         $.swapRouter = _swapRouter;
+        $.harvestThreshold = _harvestThreshold;
+        $.syncCooldown = _syncCooldown;
+        $.slippageTolerance = _slippageTolerance;
     }
 
     function deposit(uint256 assets, address receiver) public override whenNotPaused returns (uint256) {
@@ -177,5 +188,44 @@ contract ctVault is
 
         // we can sync the investment on a regular basis as it's not critical for the share price calculations
         return InvestmentModule._sync();
+    }
+
+    /// @notice Harvests earnings from investments if they exceed the threshold
+    /// @return The amount of earnings harvested
+    function harvest(bool addToCollateral) external requiresAuth returns (uint256) {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+
+        uint256 invested = getTotalInvested();
+        uint256 borrowed = getTotalBorrowed();
+
+        // check if we have any earnings to harvest
+        if (invested <= borrowed) {
+            return 0;
+        }
+
+        uint256 earnings = invested - borrowed;
+        if (earnings < $.harvestThreshold) {
+            return 0;
+        }
+
+        uint256 divestedEarnings = InvestmentModule._divestUpTo(earnings);
+        uint256 earningsValue = bOracle.getValue(divestedEarnings);
+        uint256 expectedOutput = cOracle.getAmount(earningsValue);
+        uint256 minOutput = expectedOutput.mulDiv(SLIPPAGE_PRECISION - $.slippageTolerance, SLIPPAGE_PRECISION);
+
+        IERC20($.investmentAsset).forceApprove(address($.swapRouter), earnings);
+        uint256 harvestedAmount =
+            $.swapRouter.swapExactTokensForTokens(address($.investmentAsset), address(asset()), earnings, minOutput);
+
+        if (addToCollateral) {
+            // add the harvested amount to the collateral and borrow assets
+            (uint256 totalBorrowed,) = LendingModule._onDeposit(harvestedAmount);
+            if ($.autoInvest) {
+                InvestmentModule._investOnDeposit(totalBorrowed);
+            }
+        }
+
+        emit Events.Harvest(earnings, harvestedAmount, addToCollateral);
+        return harvestedAmount;
     }
 }

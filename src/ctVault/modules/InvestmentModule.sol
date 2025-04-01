@@ -182,7 +182,7 @@ abstract contract InvestmentModule is CommonModule {
         uint256 _totalInvested = 0;
         for (uint256 i; i < $.investQueue.length; i++) {
             IStrategy strategy = $.investQueue[i];
-            _totalInvested += $.strategies[strategy].allocated;
+            _totalInvested += strategy.totalAssets();
         }
         return _totalInvested;
     }
@@ -238,9 +238,9 @@ abstract contract InvestmentModule is CommonModule {
         for (uint256 i = 0; i < $.divestQueue.length && remaining > 0; i++) {
             IStrategy strategy = $.divestQueue[i];
             Strategy storage strategyState = $.strategies[strategy];
+            uint256 totalInvested = strategy.totalAssets();
 
-            if (strategyState.allocated > 0) {
-                uint256 totalInvested = strategy.totalAssets();
+            if (totalInvested > 0) {
                 uint256 divestAmount = totalInvested > remaining ? remaining : totalInvested;
 
                 remaining -= divestAmount;

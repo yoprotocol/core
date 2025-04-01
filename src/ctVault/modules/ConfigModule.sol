@@ -10,6 +10,7 @@ import { ISwap } from "../interfaces/ISwap.sol";
 abstract contract ConfigModule is CommonModule {
     uint96 internal constant MAX_PERFORMANCE_FEE = 0.5e18;
     uint40 internal constant MAX_SYNC_COOLDOWN = 5 days;
+    uint40 internal constant SLIPPAGE_PRECISION = 10_000;
 
     /// @notice Sets the swap router.
     /// @param _swapRouter The address of the swap router.
@@ -51,5 +52,21 @@ abstract contract ConfigModule is CommonModule {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
         $.autoInvest = _autoInvest;
         emit Events.AutoInvestUpdated(_autoInvest);
+    }
+
+    /// @notice Sets the minimum amount of earnings required to trigger a harvest
+    /// @param _threshold The new threshold
+    function setHarvestThreshold(uint256 _threshold) external requiresAuth {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+        emit Events.HarvestThresholdUpdated($.harvestThreshold, _threshold);
+        $.harvestThreshold = _threshold;
+    }
+
+    /// @notice Sets the maximum allowed slippage when swapping earnings
+    /// @param _slippageTolerance The slippage tolerance in basis points (1% = 100)
+    function setSlippageTolerance(uint40 _slippageTolerance) external requiresAuth {
+        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
+        emit Events.SlippageToleranceUpdated($.slippageTolerance, _slippageTolerance);
+        $.slippageTolerance = _slippageTolerance;
     }
 }

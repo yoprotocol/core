@@ -49,8 +49,6 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
         console.log("===================Strategy=============================");
         IStrategy strategy = IStrategy(vault.investQueueAt(0));
-        // donate 1 USDC to the strategy
-        usdc.transfer(address(strategy), 1e6);
 
         console.log("strategy", address(strategy));
         uint256 strategyTotalAssets = strategy.totalAssets();
@@ -73,7 +71,18 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         strategyInvested = strategy.totalInvested();
         console.log("strategyInvested", strategyInvested);
 
-        uint256 borrowAmount = vault.calculateBorrowAmount(1, 6 * 1e17);
+        uint256 borrowAmount = vault.getTotalBorrowed();
+        uint256 totalInvested = vault.getTotalInvested();
         console.log("borrowAmount", borrowAmount);
+        console.log("totalInvested", totalInvested);
+
+        // donate 1000 USDC to the strategy to harvest
+        usdc.transfer(address(strategy), 1000e6);
+        vault.harvest(true);
+
+        borrowAmount = vault.getTotalBorrowed();
+        totalInvested = vault.getTotalInvested();
+        console.log("borrowAmount", borrowAmount);
+        console.log("totalInvested", totalInvested);
     }
 }

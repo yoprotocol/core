@@ -129,9 +129,8 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
 
     function deploySwapRouter() internal returns (UniswapRouter) {
         uint24 fee = 3000;
-        address uniswapV3Quoter = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
         address uniswapV3Router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-        return new UniswapRouter(fee, uniswapV3Quoter, uniswapV3Router);
+        return new UniswapRouter(fee, uniswapV3Router);
     }
 
     function deployVault() internal {
@@ -142,7 +141,16 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         UniswapRouter swapRouter = deploySwapRouter();
 
         bytes memory data = abi.encodeWithSelector(
-            ctVault.initialize.selector, cbBTC, users.admin, "ctBTCVault", "ctBTC", usdc, swapRouter
+            ctVault.initialize.selector,
+            cbBTC,
+            users.admin,
+            "ctBTCVault",
+            "ctBTC",
+            usdc,
+            swapRouter,
+            100e6, // 100 USDC
+            0, // disable
+            300 // 3%
         );
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(impl), users.admin, data);

@@ -216,19 +216,20 @@ abstract contract LendingModule is CommonModule {
     /// @notice Returns the Loan-to-Value ratio of the vault
     /// @return The LTV ratio
     function getVaultLTV() public view returns (uint256) {
+        (uint256 totalBorrowed, uint256 totalCollateral) = getState();
+        return _getLTV(totalCollateral, totalBorrowed);
+    }
+
+    function getState() public view returns (uint256 totalBorrowed, uint256 totalCollateral) {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
-        uint256 _totalCollateral = 0;
-        uint256 _totalBorrowed = 0;
 
         for (uint256 i; i < $.lendingAdapters.length; i++) {
             ILendingAdapter adapter = ILendingAdapter($.lendingAdapters[i]);
             uint256 borrowed = adapter.getBorrowed();
             uint256 collateral = adapter.getCollateral();
-            _totalBorrowed += borrowed;
-            _totalCollateral += collateral;
+            totalBorrowed += borrowed;
+            totalCollateral += collateral;
         }
-
-        return _getLTV(_totalCollateral, _totalBorrowed);
     }
 
     /// @notice Returns the total amount of collateral in the vault

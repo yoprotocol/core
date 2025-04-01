@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { IQuoter } from "./uniswap/IQuoter.sol";
+import { ISwap } from "../interfaces/ISwap.sol";
 import { ISwapRouter } from "./uniswap/ISwapRouter.sol";
 
-import { ISwap } from "../interfaces/ISwap.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract UniswapRouter is ISwap {
-    uint24 public immutable fee;
+    using SafeERC20 for IERC20;
 
-    IQuoter public immutable quoter;
+    uint24 public immutable fee;
     ISwapRouter public immutable router;
 
-    constructor(uint24 _fee, address _quoter, address _router) {
+    constructor(uint24 _fee, address _router) {
         fee = _fee;
-
-        quoter = IQuoter(_quoter);
         router = ISwapRouter(_router);
     }
 
@@ -30,11 +29,14 @@ contract UniswapRouter is ISwap {
         override
         returns (uint256 amountOut)
     {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).forceApprove(address(router), amountIn);
+
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: tokenIn,
             tokenOut: tokenOut,
             fee: fee,
-            recipient: address(this),
+            recipient: msg.sender,
             deadline: block.timestamp,
             amountIn: amountIn,
             amountOutMinimum: amountOutMinimum,
