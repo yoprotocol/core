@@ -218,6 +218,111 @@ graph TD
 - Efficient data structures
 - Gas-optimized operations
 
+## Public/External Methods
+
+### ctVault Contract
+
+| Method Name | Visibility | Modifiers               |
+| ----------- | ---------- | ----------------------- |
+| initialize  | public     | initializer             |
+| mint        | public     | whenNotPaused, override |
+| deposit     | public     | whenNotPaused, override |
+| redeem      | public     | whenNotPaused, override |
+| withdraw    | public     | whenNotPaused, override |
+| totalAssets | public     | view, override          |
+
+### BaseChainlinkOracle Contract
+
+| Method Name | Visibility | Modifiers     |
+| ----------- | ---------- | ------------- |
+| price       | public     | view, virtual |
+| getValue    | external   | view          |
+| getAmount   | external   | view          |
+
+### BaseLendingAdapter Contract
+
+| Method Name      | Visibility | Modifiers     |
+| ---------------- | ---------- | ------------- |
+| addCollateral    | external   | onlyVault     |
+| removeCollateral | external   | onlyVault     |
+| borrow           | external   | onlyVault     |
+| repay            | external   | onlyVault     |
+| repayAll         | public     | onlyVault     |
+| logStats         | external   |               |
+| getCollateral    | public     | view, virtual |
+| getBorrowLimit   | public     | view, virtual |
+| getBorrowed      | public     | view, virtual |
+| getSupplyAPY     | public     | view, virtual |
+| getBorrowAPY     | public     | view, virtual |
+| getHealthFactor  | public     | view, virtual |
+
+### ConfigModule Contract
+
+| Method Name          | Visibility | Modifiers    |
+| -------------------- | ---------- | ------------ |
+| setSwapRouter        | external   | requiresAuth |
+| setFeeRecipient      | external   | requiresAuth |
+| setPerformanceFee    | external   | requiresAuth |
+| setSyncCooldown      | external   | requiresAuth |
+| setAutoInvest        | external   | requiresAuth |
+| setHarvestThreshold  | external   | requiresAuth |
+| setSlippageTolerance | external   | requiresAuth |
+
+### InvestmentModule Contract
+
+| Method Name       | Visibility | Modifiers    |
+| ----------------- | ---------- | ------------ |
+| setInvestQueue    | external   | requiresAuth |
+| addStrategy       | external   | requiresAuth |
+| getTotalInvested  | public     | view         |
+| investQueueAt     | public     | view         |
+| investQueueLength | public     | view         |
+| investQueue       | public     | view         |
+| divestQueueAt     | public     | view         |
+| divestQueueLength | public     | view         |
+| divestQueue       | public     | view         |
+
+### LendingModule Contract
+
+| Method Name           | Visibility | Modifiers    |
+| --------------------- | ---------- | ------------ |
+| setLendingProtocol    | external   | requiresAuth |
+| lendingAdaptersAt     | public     | view         |
+| lendingAdaptersLength | public     | view         |
+| lendingAdapters       | public     | view         |
+| getBorrowAmount       | public     | view         |
+| convertToCollateral   | public     | view         |
+| getVaultLTV           | public     | view         |
+| getState              | public     | view         |
+| getTotalCollateral    | public     | view         |
+| getTotalBorrowed      | public     | view         |
+
+### BaseStrategy Contract
+
+| Method Name         | Visibility | Modifiers     |
+| ------------------- | ---------- | ------------- |
+| invest              | public     | onlyVault     |
+| divest              | public     | onlyVault     |
+| divestAll           | public     | onlyVault     |
+| claimRewards        | public     | onlyHarvester |
+| setRewardsHarvester | public     | onlyOwner     |
+| idle                | public     | view, virtual |
+| asset               | public     | view, virtual |
+| totalAssets         | public     | view, virtual |
+| totalInvested       | public     | view, virtual |
+
+### FixedPriceOracle Contract
+
+| Method Name | Visibility | Modifiers      |
+| ----------- | ---------- | -------------- |
+| price       | public     | view, override |
+
+### ctVaultAssetOracle Contract
+
+| Method Name | Visibility | Modifiers      |
+| ----------- | ---------- | -------------- |
+| price       | public     | view, override |
+
 ## Integration Points
 
 ### 1. External Protocols
