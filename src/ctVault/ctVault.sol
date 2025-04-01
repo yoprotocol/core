@@ -81,7 +81,7 @@ contract ctVault is
         uint256 earnings;
         if (invested > borrowed) {
             earnings = invested - borrowed;
-            losses = convertToCollateral(earnings);
+            earnings = convertToCollateral(earnings);
         } else {
             losses = borrowed - invested;
             losses = convertToCollateral(losses);

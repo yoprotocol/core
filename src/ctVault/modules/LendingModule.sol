@@ -187,13 +187,32 @@ abstract contract LendingModule is CommonModule {
         return borrowAmount;
     }
 
-    /// @notice Convert a borrow amount to its equivalent collateral amount using price oracles
-    /// @param _borrowAmount The amount to convert (in borrow asset)
-    /// @return collateralAmount The equivalent amount in collateral asset
+    /**
+     * @notice Converts an amount of borrowed assets to its equivalent
+     * amount of collateral assets based on their prices
+     * and decimal differences.
+     *
+     * @dev The formula used for conversion is:
+     *      numerator = A1 * P1 * 10^(D2 - D1)
+     *      A2 = (numerator + P2 - 1) / P2
+     *
+     *      Where:
+     *        - A1 = borrow amount
+     *        - P1 = price of borrowed asset
+     *        - P2 = price of collateral asset
+     *        - D1 = decimals of borrowed asset
+     *        - D2 = decimals of collateral asset
+     *        - 10^(D2 - D1) = Scaling factor to adjust decimals between the assets
+     *        - Adding (P2 - 1) ensures ceiling division to avoid truncation errors.
+     *
+     * @param _borrowAmount The amount of asset1 to be converted.
+     * @return collateralAmount The equivalent amount of asset2.
+     */
     function convertToCollateral(uint256 _borrowAmount) public view returns (uint256 collateralAmount) {
-        uint256 borrowedValue = bOracle.getValue(_borrowAmount);
-        collateralAmount = cOracle.getAmount(borrowedValue);
-        return collateralAmount;
+        uint256 borrowedPrice = bOracle.price();
+        uint256 collateralPrice = cOracle.price();
+        uint256 numerator = _borrowAmount * borrowedPrice * (10 ** (cOracle.assetDecimals() - bOracle.assetDecimals()));
+        return (numerator + collateralPrice - 1) / collateralPrice;
     }
 
     /// @notice Returns the Loan-to-Value ratio of the vault

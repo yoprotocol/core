@@ -72,5 +72,8 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
         strategyInvested = strategy.totalInvested();
         console.log("strategyInvested", strategyInvested);
+
+        uint256 borrowAmount = vault.calculateBorrowAmount(1, 6 * 1e17);
+        console.log("borrowAmount", borrowAmount);
     }
 }

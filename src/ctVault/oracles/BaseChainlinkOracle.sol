@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import { console } from "forge-std/console.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 import { AggregatorV3Interface } from "../interfaces/AggregatorV3Interface.sol";
 
@@ -14,23 +15,28 @@ abstract contract BaseChainlinkOracle is IOracle {
     /// @notice We want prices scaled to 18 decimals
     uint256 public constant TARGET_DECIMALS = 18;
 
+    /// @notice The number of decimals of the asset.
+    uint256 public immutable assetDecimals;
+
+    constructor(uint256 _assetDecimals) {
+        assetDecimals = _assetDecimals;
+    }
+
     /// @inheritdoc IOracle
     function price() public view virtual returns (uint256);
 
     /// @dev Returns the value of an amount of an asset in USD.
     /// @param _amount The amount of the asset.
-    /// @param _assetDecimals The number of decimals of the asset.
     /// @return The value of the asset in USD.
-    function _getValue(uint256 _amount, uint256 _assetDecimals) internal view returns (uint256) {
-        return _amount.mulDiv(price(), 10 ** _assetDecimals);
+    function getValue(uint256 _amount) external view returns (uint256) {
+        return _amount.mulDiv(price(), 10 ** assetDecimals, Math.Rounding.Floor);
     }
 
     /// @dev Returns the amount of an asset that corresponds to a given value in USD.
     /// @param _value The value of the asset in USD.
-    /// @param _assetDecimals The number of decimals of the asset.
     /// @return The amount of the asset.
-    function _getAmount(uint256 _value, uint256 _assetDecimals) internal view returns (uint256) {
-        return _value.mulDiv(10 ** _assetDecimals, price());
+    function getAmount(uint256 _value) external view returns (uint256) {
+        return _value.mulDiv(10 ** assetDecimals, price(), Math.Rounding.Floor);
     }
 
     /**
