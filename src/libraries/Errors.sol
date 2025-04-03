@@ -39,4 +39,7 @@ library Errors {
 
     /// @notice Thrown when the requested amount of assets is zero
     error Escrow__AmountZero();
+
+    /// @notice Thrown when the requested amount of assets is zero
+    error ZeroAmount();
 }

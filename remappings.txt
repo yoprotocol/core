@@ -1,4 +1,5 @@
 @openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
 @openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/
 @solmate/=node_modules/solmate/src/
+@morpho-blue/=node_modules/@morpho-org/morpho-blue/src
 forge-std/=node_modules/forge-std/src
