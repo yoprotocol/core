@@ -48,7 +48,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         console.log("totalBorrowed", totalBorrowed);
 
         console.log("===================Strategy=============================");
-        IStrategy strategy = IStrategy(vault.investQueueAt(0));
+        IStrategy strategy = IStrategy(vault.defaultInvestStrategy());
 
         console.log("strategy", address(strategy));
         uint256 strategyTotalAssets = strategy.totalAssets();

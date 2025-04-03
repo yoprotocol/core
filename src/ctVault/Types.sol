@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import { IStrategy } from "./interfaces/IStrategy.sol";
 import { ILendingAdapter } from "./interfaces/ILendingAdapter.sol";
 
 enum LendingActionType {
@@ -22,9 +23,9 @@ enum InvestmentActionType {
 }
 
 struct InvestmentAction {
-    InvestmentActionType actionType;
     uint256 amount;
-    uint256 strategyIndex;
+    IStrategy strategy;
+    InvestmentActionType actionType;
 }
 
 struct Repayment {

@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import { Repayment } from "./Types.sol";
 import { ISwap } from "./interfaces/ISwap.sol";
 
-import { Compatible } from "../base/Compatible.sol";
 import { AuthUpgradeable, Authority } from "../base/AuthUpgradable.sol";
 
 import { ConfigModule } from "./modules/ConfigModule.sol";
@@ -12,6 +11,7 @@ import { LendingModule } from "./modules/LendingModule.sol";
 import { InvestmentModule } from "./modules/InvestmentModule.sol";
 
 import { Events } from "./libraries/Events.sol";
+import { Errors } from "./libraries/Errors.sol";
 import { CtVaultStorage, CtVaultStorageLib } from "./libraries/Storage.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -29,7 +29,6 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 // ╚██████╗   ██║    ╚████╔╝ ██║  ██║╚██████╔╝███████╗   ██║
 //  ╚═════╝   ╚═╝     ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝
 contract ctVault is
-    Compatible,
     AuthUpgradeable,
     ConfigModule,
     LendingModule,
@@ -57,7 +56,6 @@ contract ctVault is
         IERC20 _investmentAsset,
         ISwap _swapRouter,
         uint256 _harvestThreshold,
-        uint40 _syncCooldown,
         uint40 _slippageTolerance
     )
         public
@@ -74,7 +72,6 @@ contract ctVault is
         $.investmentAsset = _investmentAsset;
         $.swapRouter = _swapRouter;
         $.harvestThreshold = _harvestThreshold;
-        $.syncCooldown = _syncCooldown;
         $.slippageTolerance = _slippageTolerance;
     }
 
@@ -184,9 +181,8 @@ contract ctVault is
     }
 
     /// @notice Syncs the vault's state with the lending and investment modules.
-    /// @return True if the sync was successful, false otherwise.
-    function sync() external returns (bool) {
-        return _sync();
+    function sync() external {
+        _sync();
     }
 
     // TODO: max deposit must be the value of the remaining allocation across all lending strategies
@@ -202,19 +198,18 @@ contract ctVault is
         }
     }
 
-    function _sync() internal override(InvestmentModule, LendingModule) returns (bool) {
-        CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
-
-        // we need to sync every time so we always have the latest debt and collateral values
+    function _sync() internal override(InvestmentModule, LendingModule) {
         LendingModule._sync();
+        InvestmentModule._sync();
+    }
 
-        if ($.lastSyncTimestamp + $.syncCooldown > block.timestamp) {
-            return false;
+    function rescueFunds(address token, uint256 amount) external requiresAuth {
+        if (token == address(0)) {
+            (bool success,) = payable(msg.sender).call{ value: amount }("");
+            require(success, Errors.Common_CannotRescueFunds(address(0)));
+        } else {
+            IERC20(token).safeTransfer(msg.sender, amount);
         }
-        $.lastSyncTimestamp = uint40(block.timestamp);
-
-        // we can sync the investment on a regular basis as it's not critical for the share price calculations
-        return InvestmentModule._sync();
     }
 
     /// @notice Harvests earnings from investments if they exceed the threshold

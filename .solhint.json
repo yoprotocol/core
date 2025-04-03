@@ -5,7 +5,7 @@
     "compiler-version": ["error", ">=0.8.28"],
     "func-name-mixedcase": "off",
     "func-visibility": ["error", { "ignoreConstructors": true }],
-    "max-line-length": ["error", 120],
+    "max-line-length": ["error", 130],
     "named-parameters-mapping": "warn",
     "contract-name-camelcase": "off",
     "immutable-vars-naming": "off",

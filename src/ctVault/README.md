@@ -270,17 +270,15 @@ graph TD
 
 ### InvestmentModule Contract
 
-| Method Name       | Visibility | Modifiers    |
-| ----------------- | ---------- | ------------ |
-| setInvestQueue    | external   | requiresAuth |
-| addStrategy       | external   | requiresAuth |
-| getTotalInvested  | public     | view         |
-| investQueueAt     | public     | view         |
-| investQueueLength | public     | view         |
-| investQueue       | public     | view         |
-| divestQueueAt     | public     | view         |
-| divestQueueLength | public     | view         |
-| divestQueue       | public     | view         |
+| Method Name              | Visibility | Modifiers    |
+| ------------------------ | ---------- | ------------ |
+| setDefaultInvestStrategy | external   | requiresAuth |
+| addStrategy              | external   | requiresAuth |
+| getTotalInvested         | public     | view         |
+| divestQueueAt            | public     | view         |
+| divestQueueLength        | public     | view         |
+| divestQueue              | public     | view         |
+| defaultInvestStrategy    | public     | view         |
 
 ### LendingModule Contract
 

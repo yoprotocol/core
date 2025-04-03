@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 library Errors {
     //============================== Common ===============================
+    error Common_CannotRescueFunds(address token);
     error Common__OnlyVault();
     error Common__ZeroAmount();
     error Common__ZeroAddress();

@@ -339,8 +339,7 @@ abstract contract LendingModule is CommonModule {
     }
 
     /// @dev Called when a sync is performed.
-    /// @return true if the sync was successful, false otherwise.
-    function _sync() internal virtual returns (bool) {
+    function _sync() internal virtual {
         CtVaultStorage storage $ = CtVaultStorageLib._getCtVaultStorage();
 
         uint256 totalBorrowed = 0;
@@ -353,6 +352,5 @@ abstract contract LendingModule is CommonModule {
         }
         $.totalBorrowed = totalBorrowed;
         $.totalCollateral = totalCollateral;
-        return true;
     }
 }

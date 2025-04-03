@@ -101,6 +101,7 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         address rewardDistributor = 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae;
         EulerStrategy strategy = new EulerStrategy(address(vault), users.admin, euler, rewardDistributor);
         vault.addStrategy(strategy, 100_000e6); // 100k USDC
+        vault.setDefaultInvestStrategy(strategy);
     }
 
     function deployLendingAdapter() internal {
@@ -149,7 +150,6 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
             usdc,
             swapRouter,
             100e6, // 100 USDC
-            0, // disable
             300 // 3%
         );
 

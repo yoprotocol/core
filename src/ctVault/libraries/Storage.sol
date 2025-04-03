@@ -22,10 +22,6 @@ struct CtVaultStorage {
     /// @dev Packed in a single storage slot (96 + 40 + 40 + 40 + 8 = 224 bits)
     /// @notice fee minted to the treasury and deducted from the earnings
     uint96 performanceFee;
-    /// @notice cooldown period for the sync function
-    uint40 syncCooldown;
-    /// @notice timestamp of the last sync
-    uint40 lastSyncTimestamp;
     /// @notice the maximum allowed slippage when swapping earnings (1% = 100)
     uint40 slippageTolerance;
     /// @notice whether to automatically invest the assets on deposit or not
@@ -42,10 +38,10 @@ struct CtVaultStorage {
     mapping(ILendingAdapter adapter => LendingConfig config) lendingAdaptersConfig;
     /// @notice the list of lending protocols
     ILendingAdapter[] lendingAdapters;
-    // @notice the list of strategies used to invest the assets
-    IStrategy[] investQueue;
     // @notice the list of strategies used to divest the assets
     IStrategy[] divestQueue;
+    /// @notice the default strategy to invest the assets
+    IStrategy defaultInvestStrategy;
 }
 
 library CtVaultStorageLib {
