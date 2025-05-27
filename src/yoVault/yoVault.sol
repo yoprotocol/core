@@ -206,7 +206,7 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
 
         emit RequestCancelled(receiver, shares, assetsWithFee);
         // transfer the shares back to the owner
-        IERC20(address(this)).transfer(receiver, shares);
+        _transfer(address(this), receiver, shares);
     }
 
     /// @notice The oracle can update the aggregated underlying balances across all strategies/chains.
