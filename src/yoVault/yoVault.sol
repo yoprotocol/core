@@ -330,6 +330,34 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
         return assets - _feeOnTotal(assets, feeOnWithdraw);
     }
 
+    function maxDeposit(address receiver) public view virtual override returns (uint256) {
+        if (paused()) {
+            return 0;
+        }
+        return super.maxDeposit(receiver);
+    }
+
+    function maxMint(address receiver) public view virtual override returns (uint256) {
+        if (paused()) {
+            return 0;
+        }
+        return super.maxMint(receiver);
+    }
+
+    function maxWithdraw(address owner) public view virtual override returns (uint256) {
+        if (paused()) {
+            return 0;
+        }
+        return super.maxWithdraw(owner);
+    }
+
+    function maxRedeem(address owner) public view virtual override returns (uint256) {
+        if (paused()) {
+            return 0;
+        }
+        return super.maxRedeem(owner);
+    }
+
     /// @dev Account for the fee charged for the vault operations if the fee recipient and fee are set.
     function _withdraw(
         address caller,
