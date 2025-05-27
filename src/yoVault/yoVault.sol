@@ -72,6 +72,7 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
 
     //============================== INITIALIZER ===============================
     function initialize(IERC20 _asset, address _owner, string memory _name, string memory _symbol) public initializer {
+        __Context_init();
         __ERC20_init(_name, _symbol);
         __ERC4626_init(_asset);
         __Auth_init(_owner, Authority(address(0)));
