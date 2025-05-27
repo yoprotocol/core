@@ -165,10 +165,9 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
         _transfer(owner, address(this), shares);
 
         totalPendingAssets += assetsWithFee;
-        _pendingRedeem[receiver] = PendingRedeem({
-            shares: _pendingRedeem[receiver].shares + shares,
-            assets: _pendingRedeem[receiver].assets + assetsWithFee
-        });
+        PendingRedeem storage pending = _pendingRedeem[receiver];
+        pending.shares += shares;
+        pending.assets += assetsWithFee;
 
         return REQUEST_ID;
     }
