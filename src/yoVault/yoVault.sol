@@ -55,7 +55,7 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
     uint256 public maxPercentageChange;
     /// @dev the fee charged for the withdraws, it's a percentage of the assets redeemed
     uint256 public feeOnWithdraw;
-    /// @dev the fee charged for the deposits, it's a percentage of the assets redeemed
+    /// @dev the fee charged for the deposits, it's a percentage of the assets deposited
     uint256 public feeOnDeposit;
     /// @dev the address that receives the fees for the vault operations, if it's zero, no fees are charged
     address public feeRecipient;
