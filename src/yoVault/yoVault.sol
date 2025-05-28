@@ -220,7 +220,7 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
         aggregatedUnderlyingBalances = newAggregatedBalance;
 
         /// @dev the price per share is calculated taking into account the new aggregated underlying balances
-        uint256 newPricePerShare = totalAssets().mulDiv(DENOMINATOR, totalSupply());
+        uint256 newPricePerShare = convertToAssets(1e18);
         uint256 percentageChange = _calculatePercentageChange(lastPricePerShare, newPricePerShare);
 
         /// @dev Pause the vault if the percentage change is greater than the threshold (works in both directions)
