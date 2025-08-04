@@ -215,17 +215,18 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
     function onUnderlyingBalanceUpdate(uint256 newAggregatedBalance) external requiresAuth {
         require(block.number > lastBlockUpdated, Errors.UpdateAlreadyCompletedInThisBlock());
 
-        emit UnderlyingBalanceUpdated(aggregatedUnderlyingBalances, newAggregatedBalance);
-        aggregatedUnderlyingBalances = newAggregatedBalance;
-
         /// @dev the price per share is calculated taking into account the new aggregated underlying balances
-        uint256 newPricePerShare = convertToAssets(1e18);
+        uint256 newPricePerShare = _totalAssets(newAggregatedBalance).mulDiv(DENOMINATOR, totalSupply());
         uint256 percentageChange = _calculatePercentageChange(lastPricePerShare, newPricePerShare);
 
         /// @dev Pause the vault if the percentage change is greater than the threshold (works in both directions)
         if (percentageChange > maxPercentageChange) {
             _pause();
+            return;
         }
+
+        emit UnderlyingBalanceUpdated(aggregatedUnderlyingBalances, newAggregatedBalance);
+        aggregatedUnderlyingBalances = newAggregatedBalance;
 
         lastPricePerShare = newPricePerShare;
         lastBlockUpdated = block.number;
@@ -275,7 +276,7 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
     /// @notice Override the default `totalAssets` function to return the total assets held by the vault and the
     /// aggregated underlying balances across all strategies/chains.
     function totalAssets() public view override returns (uint256) {
-        return IERC20(asset()).balanceOf(address(this)) + aggregatedUnderlyingBalances;
+        return _totalAssets(aggregatedUnderlyingBalances);
     }
 
     /// @dev Override the default `deposit` function to add the `whenNotPaused` modifier.
@@ -389,6 +390,10 @@ contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, P
         if (feeAmount > 0 && recipient != address(0)) {
             IERC20(asset()).safeTransfer(recipient, feeAmount);
         }
+    }
+
+    function _totalAssets(uint256 _underlyingBalances) internal view returns (uint256) {
+        return IERC20(asset()).balanceOf(address(this)) + _underlyingBalances;
     }
 
     //============================== PRIVATE FUNCTIONS ===============================
