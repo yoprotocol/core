@@ -147,7 +147,7 @@ contract YoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, P
     /// @param owner The address of the owner.
     /// @return The ID of the request which is always 0 or the assets amount if the request is immediately
     /// processed.
-    function requestRedeem(uint256 shares, address receiver, address owner) external whenNotPaused returns (uint256) {
+    function requestRedeem(uint256 shares, address receiver, address owner) public whenNotPaused returns (uint256) {
         require(shares > 0, Errors.SharesAmountZero());
         require(owner == msg.sender, Errors.NotSharesOwner());
         require(balanceOf(owner) >= shares, Errors.InsufficientShares());
@@ -289,16 +289,13 @@ contract YoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, P
         return super.mint(shares, receiver);
     }
 
-    /// @notice It allows the controller to withdraw assets from the vault and burn the shares. A claimable redeem is
-    /// required which is created when a redeem request is fulfilled by the operator.
+    /// @notice This method is disabled. Use `requestRedeem` or `redeem`instead.
     function withdraw(uint256, address, address) public override whenNotPaused returns (uint256) {
         revert Errors.UseRequestRedeem();
     }
 
-    /// @notice It allows the controller to redeem shares from the vault and transfer the assets to the receiver. A
-    /// claimable redeem is required which is created when a redeem request is fulfilled by the operator.
-    function redeem(uint256, address, address) public override whenNotPaused returns (uint256) {
-        revert Errors.UseRequestRedeem();
+    function redeem(uint256 shares, address receiver, address owner) public override whenNotPaused returns (uint256) {
+        return requestRedeem(shares, receiver, owner);
     }
 
     /// @dev Override the default `_update` function to add the `whenNotPaused` modifier.
