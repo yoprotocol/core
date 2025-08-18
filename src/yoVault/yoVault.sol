@@ -2,10 +2,10 @@
 pragma solidity 0.8.28;
 
 import { Errors } from "../libraries/Errors.sol";
-import { IyoVault } from "../interfaces/IyoVault.sol";
+import { IYoVault } from "../interfaces/IYoVault.sol";
 
 import { Compatible } from "../base/Compatible.sol";
-import { AuthUpgradeable, Authority } from "../base/AuthUpgradable.sol";
+import { AuthUpgradeable, Authority } from "../base/AuthUpgradeable.sol";
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
@@ -27,7 +27,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 /// immediately. Otherwise, the assets are transferred to the vault and the request is stored until the operator
 /// fulfills it.
 
-contract yoVault is ERC4626Upgradeable, Compatible, IyoVault, AuthUpgradeable, PausableUpgradeable {
+contract yoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, PausableUpgradeable {
     using Math for uint256;
     using Address for address;
     using SafeERC20 for IERC20;
