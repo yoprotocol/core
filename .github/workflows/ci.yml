@@ -51,6 +51,16 @@ jobs:
       - name: "Install the Node.js dependencies"
         run: "bun install"
 
+      - name: "Verify dependencies are installed"
+        run: |
+          echo "Checking if solmate is installed..."
+          ls -la node_modules/solmate/src/auth/authorities/
+          echo "Checking if forge-std is installed..."
+          ls -la node_modules/forge-std/src/
+
+      - name: "Show remappings"
+        run: "forge remappings"
+
       - name: "Build the contracts and print their size"
         run: "forge build --sizes"
 
@@ -74,6 +84,16 @@ jobs:
 
       - name: "Install the Node.js dependencies"
         run: "bun install"
+
+      - name: "Verify dependencies are installed"
+        run: |
+          echo "Checking if solmate is installed..."
+          ls -la node_modules/solmate/src/auth/authorities/
+          echo "Checking if forge-std is installed..."
+          ls -la node_modules/forge-std/src/
+
+      - name: "Show remappings"
+        run: "forge remappings"
 
       - name: "Show the Foundry config"
         run: "forge config"
