@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import { Base_Test } from "./Base.t.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { console } from "forge-std/console.sol";
 
 contract Deposit_Unit_Concrete_Test is Base_Test {
     using Math for uint256;
@@ -17,13 +18,22 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
         depositAmount = 115 * 1e6;
         depositFee = 1e16;
-        withdrawFee = 1e16;
+        withdrawFee = 9e16;
         feeRecipient = users.bob;
 
         vm.startPrank({ msgSender: users.admin });
         depositVault.updateDepositFee(depositFee);
         depositVault.updateWithdrawFee(withdrawFee);
         depositVault.updateFeeRecipient(feeRecipient);
+        vm.stopPrank();
+    }
+
+    function test_redeem_rounding_issue() public {
+        vm.startPrank({ msgSender: users.alice });
+        depositVault.deposit(1000, users.alice);
+        depositVault.requestRedeem(depositVault.balanceOf(users.alice), users.alice, users.alice);
+        console.log("balance of", usdc.balanceOf(users.alice));
+        console.log("balance of vault", usdc.balanceOf(address(depositVault)));
         vm.stopPrank();
     }
 

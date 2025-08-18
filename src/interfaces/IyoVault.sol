@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 /// @title IyoVault
 /// @notice Interface for the YO vault part of the YO protocol
-interface IyoVault {
+interface IYoVault {
     struct PendingRedeem {
         uint256 assets;
         uint256 shares;

@@ -39,4 +39,31 @@ library Errors {
 
     /// @notice Thrown when the requested amount of assets is zero
     error Escrow__AmountZero();
+
+    /// @notice Thrown when the vault address is zero
+    error Registry__VaultAddressZero();
+
+    /// @notice Thrown when the vault already exists
+    error Registry__VaultAlreadyExists(address vaultAddress);
+
+    /// @notice Thrown when the vault does not exist
+    error Registry__VaultNotExists(address vaultAddress);
+
+    /// @notice Thrown when the vault is not allowed
+    error Gateway__VaultNotAllowed();
+
+    /// @notice Thrown when the amount is zero
+    error Gateway__ZeroAmount();
+
+    /// @notice Thrown when the receiver is zero
+    error Gateway__ZeroReceiver();
+
+    /// @notice Thrown when the shares out is less than the minimum shares out
+    error Gateway__InsufficientSharesOut(uint256 sharesOut, uint256 minSharesOut);
+
+    /// @notice Thrown when the owner of the shares is zero
+    error Gateway__ZeroOwner();
+
+    /// @notice Thrown when the assets out is less than the minimum assets out
+    error Gateway__InsufficientAssetsOut(uint256 assetsOut, uint256 minAssetsOut);
 }

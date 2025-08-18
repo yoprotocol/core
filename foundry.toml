@@ -1,5 +1,3 @@
-# Full reference https://github.com/foundry-rs/foundry/tree/master/crates/config
-
 [profile.default]
 auto_detect_solc = false
 block_timestamp = 1_738_368_000  # Feb 1, 2025 at 00:00 GMT
@@ -24,8 +22,12 @@ fuzz = { runs = 10_000 }
 verbosity = 4
 
 [etherscan]
+unichain = { key = "DPV3QUAJW29V316Z2HYHU2Y2HZY3V4B422", url = "https://api.uniscan.xyz/api", chain = "130" }
+
+
 mainnet = { key = "${API_KEY_ETHERSCAN}" }
 base = { key = "${API_KEY_ETHERSCAN_BASE}" }
+arbitrum = { key = "${API_KEY_ETHERSCAN_ARBITRUM}" }
 
 [fmt]
 bracket_spacing = true
@@ -41,6 +43,7 @@ wrap_comments = true
 arbitrum = "https://arbitrum-one-rpc.publicnode.com"
 avalanche = "https://avalanche-c-chain-rpc.publicnode.com"
 base = "https://base-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+unichain = "https://unichain-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
 bnb_smart_chain = "https://bsc-dataseed.binance.org"
 gnosis_chain = "https://rpc.gnosischain.com"
 localhost = "http://localhost:8545"
