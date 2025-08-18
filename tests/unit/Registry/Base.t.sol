@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import { Test } from "forge-std/Test.sol";
-import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { Authority } from "src/base/AuthUpgradeable.sol";
@@ -76,7 +75,7 @@ abstract contract Registry_Base_Test is Test, Events, Utils, Constants {
 
 /// @dev Mock ERC4626 vault for testing
 contract MockERC4626Vault {
-    address public immutable asset;
+    address public asset;
 
     constructor(address _asset) {
         asset = _asset;

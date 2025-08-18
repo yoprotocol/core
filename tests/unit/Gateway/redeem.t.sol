@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import { Gateway_Base_Test } from "./Base.t.sol";
 import { Errors } from "src/libraries/Errors.sol";
 
 contract Redeem_Test is Gateway_Base_Test {
     error ERC20InsufficientAllowance(address user, uint256 allowance, uint256 expected);
     error ERC20InsufficientBalance(address user, uint256 balance, uint256 expected);
+    error UserHasNoSharesToRedeem();
 
     // ========================================= EVENTS =========================================
     event YoGatewayRedeem(
@@ -23,9 +20,9 @@ contract Redeem_Test is Gateway_Base_Test {
     );
 
     // ========================================= VARIABLES =========================================
-    uint256 constant ASSETS = 1000e6;
-    uint256 constant MIN_ASSETS_OUT = 900e6;
-    uint32 constant PARTNER_ID = 1;
+    uint256 public constant ASSETS = 1000e6;
+    uint256 public constant MIN_ASSETS_OUT = 900e6;
+    uint32 public constant PARTNER_ID = 1;
 
     // ========================================= SETUP =========================================
 
@@ -42,7 +39,7 @@ contract Redeem_Test is Gateway_Base_Test {
 
     function test_redeem_Success() public {
         uint256 shares = yoVault.balanceOf(users.bob);
-        require(shares > 0, "User should have shares to redeem");
+        require(shares > 0, UserHasNoSharesToRedeem());
 
         vm.startPrank(users.bob);
 
@@ -63,7 +60,7 @@ contract Redeem_Test is Gateway_Base_Test {
 
     function test_redeem_EmitsEvent() public {
         uint256 shares = yoVault.balanceOf(users.bob);
-        require(shares > 0, "User should have shares to redeem");
+        require(shares > 0, "User has no shares to redeem");
 
         vm.startPrank(users.bob);
 
@@ -94,7 +91,7 @@ contract Redeem_Test is Gateway_Base_Test {
 
     function test_redeem_RevertWhen_ZeroReceiver() public {
         uint256 shares = yoVault.balanceOf(users.bob);
-        require(shares > 0, "User should have shares to redeem");
+        require(shares > 0, UserHasNoSharesToRedeem());
 
         vm.startPrank(users.bob);
 
@@ -107,7 +104,7 @@ contract Redeem_Test is Gateway_Base_Test {
 
     function test_redeem_RevertWhen_VaultNotAllowed() public {
         uint256 shares = yoVault.balanceOf(users.bob);
-        require(shares > 0, "User should have shares to redeem");
+        require(shares > 0, UserHasNoSharesToRedeem());
 
         vm.startPrank(users.bob);
 
@@ -120,7 +117,7 @@ contract Redeem_Test is Gateway_Base_Test {
 
     function test_redeem_RevertWhen_InsufficientAssetsOut() public {
         uint256 shares = yoVault.balanceOf(users.bob);
-        require(shares > 0, "User should have shares to redeem");
+        require(shares > 0, UserHasNoSharesToRedeem());
 
         vm.startPrank(users.bob);
 
@@ -139,7 +136,7 @@ contract Redeem_Test is Gateway_Base_Test {
 
     function test_redeem_RevertWhen_InsufficientAllowance() public {
         uint256 shares = yoVault.balanceOf(users.bob);
-        require(shares > 0, "User should have shares to redeem");
+        require(shares > 0, UserHasNoSharesToRedeem());
 
         vm.startPrank(users.bob);
 
@@ -155,7 +152,7 @@ contract Redeem_Test is Gateway_Base_Test {
 
     function test_redeem_RevertWhen_InsufficientBalance() public {
         uint256 shares = yoVault.balanceOf(users.bob);
-        require(shares > 0, "User should have shares to redeem");
+        require(shares > 0, UserHasNoSharesToRedeem());
 
         vm.startPrank(users.bob);
 

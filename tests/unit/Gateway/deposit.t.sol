@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { IERC4626 } from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { console } from "forge-std/console.sol";
 
 import { Gateway_Base_Test } from "./Base.t.sol";
@@ -20,9 +18,9 @@ contract Deposit_Test is Gateway_Base_Test {
     );
 
     // ========================================= VARIABLES =========================================
-    uint256 constant ASSETS = 1000e6;
-    uint256 constant MIN_SHARES_OUT = 900e6;
-    uint32 constant PARTNER_ID = 1;
+    uint256 public constant ASSETS = 1000e6;
+    uint256 public constant MIN_SHARES_OUT = 900e6;
+    uint32 public constant PARTNER_ID = 1;
 
     // ========================================= TESTS =========================================
 

@@ -112,32 +112,4 @@ abstract contract Gateway_Base_Test is Test, Events, Utils, Constants {
         vm.label({ account: address(gateway), newLabel: "YoGateway" });
         vm.label({ account: address(registry), newLabel: "YoRegistry" });
     }
-
-    function moveAssetsFromVault(uint256 assets) internal {
-        // Note: This function may not work with the existing vault deployment
-        // as we don't have admin access to modify its authority
-        vm.startPrank({ msgSender: users.admin });
-        bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, users.admin, assets);
-
-        // Try to manage assets - this may fail if we don't have proper permissions
-        try yoVault.manage(address(usdc), data, 0) {
-            // Success
-        } catch {
-            // Ignore failure - we're using an existing vault
-        }
-
-        vm.stopPrank();
-    }
-
-    function updateUnderlyingBalance(uint256 assets) internal {
-        // Note: This function may not work with the existing vault deployment
-        // as we don't have admin access
-        vm.startPrank({ msgSender: users.admin });
-        try yoVault.onUnderlyingBalanceUpdate(assets) {
-            // Success
-        } catch {
-            // Ignore failure - we're using an existing vault
-        }
-        vm.stopPrank();
-    }
 }
