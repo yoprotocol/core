@@ -28,7 +28,7 @@ contract ListYoVaults_Test is Registry_Base_Test {
 
     // ========================================= SUCCESS TESTS =========================================
 
-    function test_listYoVaults_EmptyRegistry() public {
+    function test_listYoVaults_EmptyRegistry() public view {
         // Check empty registry
         address[] memory vaults = registry.listYoVaults();
         assertEq(vaults.length, 0, "Empty registry should return empty array");

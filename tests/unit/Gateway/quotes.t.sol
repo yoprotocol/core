@@ -14,28 +14,28 @@ contract Quotes_Test is Gateway_Base_Test {
 
     // ========================================= TESTS =========================================
 
-    function test_quoteConvertToShares_Success() public {
+    function test_quoteConvertToShares_Success() public view {
         uint256 expectedShares = yoVault.convertToShares(ASSETS);
         uint256 actualShares = gateway.quoteConvertToShares(address(yoVault), ASSETS);
 
         assertEq(actualShares, expectedShares, "Should return correct shares for assets");
     }
 
-    function test_quoteConvertToAssets_Success() public {
+    function test_quoteConvertToAssets_Success() public view {
         uint256 expectedAssets = yoVault.convertToAssets(SHARES);
         uint256 actualAssets = gateway.quoteConvertToAssets(address(yoVault), SHARES);
 
         assertEq(actualAssets, expectedAssets, "Should return correct assets for shares");
     }
 
-    function test_quotePreviewDeposit_Success() public {
+    function test_quotePreviewDeposit_Success() public view {
         uint256 expectedShares = yoVault.previewDeposit(ASSETS);
         uint256 actualShares = gateway.quotePreviewDeposit(address(yoVault), ASSETS);
 
         assertEq(actualShares, expectedShares, "Should return correct preview shares for deposit");
     }
 
-    function test_quotePreviewRedeem_Success() public {
+    function test_quotePreviewRedeem_Success() public view {
         uint256 expectedAssets = yoVault.previewRedeem(SHARES);
         uint256 actualAssets = gateway.quotePreviewRedeem(address(yoVault), SHARES);
 
@@ -66,7 +66,7 @@ contract Quotes_Test is Gateway_Base_Test {
         gateway.quotePreviewRedeem(DUMMY_VAULT, SHARES);
     }
 
-    function test_quoteFunctions_WithZeroValues() public {
+    function test_quoteFunctions_WithZeroValues() public view {
         // These should work with zero values
         uint256 sharesForZeroAssets = gateway.quoteConvertToShares(address(yoVault), 0);
         uint256 assetsForZeroShares = gateway.quoteConvertToAssets(address(yoVault), 0);

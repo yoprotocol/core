@@ -121,7 +121,7 @@ contract Integration_Test is Gateway_Base_Test {
         assertEq(aliceSharesAfter, 0, "Alice should have no shares remaining");
     }
 
-    function test_QuoteFunctionsIntegration() public {
+    function test_QuoteFunctionsIntegration() public view {
         // Test that quote functions work correctly with the actual vault
         uint256 expectedShares = gateway.quoteConvertToShares(address(yoVault), ASSETS);
         uint256 expectedAssets = gateway.quoteConvertToAssets(address(yoVault), expectedShares);

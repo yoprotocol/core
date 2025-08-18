@@ -36,12 +36,12 @@ contract IsYoVault_Test is Registry_Base_Test {
         vm.stopPrank();
     }
 
-    function test_isYoVault_UnregisteredVault() public {
+    function test_isYoVault_UnregisteredVault() public view {
         // Check if unregistered vault returns false
         assertFalse(registry.isYoVault(mockVault), "Unregistered vault should return false");
     }
 
-    function test_isYoVault_ZeroAddress() public {
+    function test_isYoVault_ZeroAddress() public view {
         // Check if zero address returns false
         assertFalse(registry.isYoVault(address(0)), "Zero address should return false");
     }
@@ -98,7 +98,7 @@ contract IsYoVault_Test is Registry_Base_Test {
         vm.stopPrank();
     }
 
-    function test_isYoVault_NonExistentContract() public {
+    function test_isYoVault_NonExistentContract() public view {
         // Check if non-existent contract address returns false
         address nonExistentContract = address(0x1234567890123456789012345678901234567890);
         assertFalse(registry.isYoVault(nonExistentContract), "Non-existent contract should return false");
