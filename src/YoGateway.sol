@@ -88,7 +88,7 @@ contract YoGateway is ReentrancyGuardUpgradeable, IYoGateway {
         require(receiver != address(0), Errors.Gateway__ZeroReceiver());
         require(registry.isYoVault(yoVault), Errors.Gateway__VaultNotAllowed());
 
-        IERC20(yoVault).safeTransferFrom(receiver, address(this), shares);
+        IERC20(yoVault).safeTransferFrom(msg.sender, address(this), shares);
         assetsOrRequestId = IYoVault(yoVault).requestRedeem(shares, receiver, address(this));
 
         bool instant = assetsOrRequestId > 0;
@@ -123,6 +123,7 @@ contract YoGateway is ReentrancyGuardUpgradeable, IYoGateway {
 
     /// @notice Returns the current allowance of `owner` for shares of the given yoVault to this gateway.
     function getShareAllowance(address yoVault, address owner) external view returns (uint256) {
+        require(registry.isYoVault(yoVault), Errors.Gateway__VaultNotAllowed());
         return IERC20(yoVault).allowance(owner, address(this));
     }
 
