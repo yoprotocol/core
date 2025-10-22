@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Errors } from "./libraries/Errors.sol";
-import { IYoVault } from "./interfaces/IYoVault.sol";
+import {Errors} from "./libraries/Errors.sol";
+import {IYoVault} from "./interfaces/IYoVault.sol";
 
-import { Compatible } from "./base/Compatible.sol";
-import { AuthUpgradeable, Authority } from "./base/AuthUpgradeable.sol";
+import {Compatible} from "./base/Compatible.sol";
+import {AuthUpgradeable, Authority} from "./base/AuthUpgradeable.sol";
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ERC4626Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 // __   __    ____            _                  _
 // \ \ / /__ |  _ \ _ __ ___ | |_ ___   ___ ___ | |
@@ -90,14 +90,11 @@ contract YoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, P
         address target,
         bytes calldata data,
         uint256 value
-    )
-        external
-        requiresAuth
-        returns (bytes memory result)
-    {
+    ) external requiresAuth returns (bytes memory result) {
         bytes4 functionSig = bytes4(data);
         require(
-            authority().canCall(msg.sender, target, functionSig), Errors.TargetMethodNotAuthorized(target, functionSig)
+            authority().canCall(msg.sender, target, functionSig),
+            Errors.TargetMethodNotAuthorized(target, functionSig)
         );
 
         result = target.functionCallWithValue(data, value);
@@ -111,11 +108,7 @@ contract YoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, P
         address[] calldata targets,
         bytes[] calldata data,
         uint256[] calldata values
-    )
-        external
-        requiresAuth
-        returns (bytes[] memory results)
-    {
+    ) external requiresAuth returns (bytes[] memory results) {
         uint256 targetsLength = targets.length;
         results = new bytes[](targetsLength);
         for (uint256 i; i < targetsLength; ++i) {
@@ -363,10 +356,7 @@ contract YoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, P
         address owner,
         uint256 assetsWithFee,
         uint256 shares
-    )
-        internal
-        override
-    {
+    ) internal override {
         uint256 feeAmount = _feeOnTotal(assetsWithFee, feeOnWithdraw);
         uint256 assets = assetsWithFee - feeAmount;
         address recipient = feeRecipient;
@@ -399,7 +389,7 @@ contract YoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, P
     /// @param oldPrice The old price.
     /// @param newPrice The new price.
     /// @return The percentage change. 1e18 = 100%.
-    function _calculatePercentageChange(uint256 oldPrice, uint256 newPrice) private pure returns (uint256) {
+    function _calculatePercentageChange(uint256 oldPrice, uint256 newPrice) internal pure returns (uint256) {
         if (oldPrice == 0) {
             return 0;
         }
