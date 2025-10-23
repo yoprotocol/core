@@ -34,6 +34,8 @@ library Errors {
     /// @notice Thrown when redeem() or withdraw() is called
     error UseRequestRedeem();
 
+    error UseOnSharePriceUpdate();
+
     /// @notice Thrown when msg.sender is not the vault
     error Escrow__OnlyVault();
 
