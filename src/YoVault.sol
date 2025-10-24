@@ -205,7 +205,7 @@ contract YoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, P
     /// @notice The oracle can update the aggregated underlying balances across all strategies/chains.
     /// @dev Can be called only once per block to prevent oracle abuse and flash loan attacks.
     /// @param newAggregatedBalance The new aggregated underlying balances.
-    function onUnderlyingBalanceUpdate(uint256 newAggregatedBalance) external requiresAuth {
+    function onUnderlyingBalanceUpdate(uint256 newAggregatedBalance) external virtual requiresAuth {
         require(block.number > lastBlockUpdated, Errors.UpdateAlreadyCompletedInThisBlock());
 
         /// @dev the price per share is calculated taking into account the new aggregated underlying balances
