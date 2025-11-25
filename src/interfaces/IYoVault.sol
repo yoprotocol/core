@@ -41,7 +41,11 @@ interface IYoVault {
     /// @param shares The shares amount
     /// @param instant The instant status
     event RedeemRequest(
-        address indexed receiver, address indexed owner, uint256 assets, uint256 shares, bool indexed instant
+        address indexed receiver,
+        address indexed owner,
+        uint256 assets,
+        uint256 shares,
+        bool indexed instant
     );
 
     /// @notice Emitted when a redeem request is fulfilled
