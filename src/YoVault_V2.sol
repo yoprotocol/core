@@ -28,7 +28,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 /// immediately. Otherwise, the assets are transferred to the vault and the request is stored until the operator
 /// fulfills it.
 
-contract YoVault is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, PausableUpgradeable {
+contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, PausableUpgradeable {
     using Math for uint256;
     using Address for address;
     using SafeERC20 for IERC20;
