@@ -265,6 +265,7 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
     /// supply (shares)
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
         (uint256 lastPricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        require(lastPricePerShare > 0, Errors.InvalidPrice());
         return assets.mulDiv(10 ** decimals(), lastPricePerShare, rounding);
     }
 
@@ -272,6 +273,7 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
     /// supply (shares)
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
         (uint256 lastPricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        require(lastPricePerShare > 0, Errors.InvalidPrice());
         return shares.mulDiv(lastPricePerShare, 10 ** decimals(), rounding);
     }
 
