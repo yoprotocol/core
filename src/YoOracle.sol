@@ -95,12 +95,6 @@ contract YoOracle is Ownable2Step, IYoOracle {
             return;
         }
 
-        // rotate anchor if window passed
-        if (nowTs - d.anchorTimestamp >= windowSeconds) {
-            d.anchorPrice = d.latestPrice;
-            d.anchorTimestamp = nowTs;
-        }
-
         // this check should never fail
         if (d.anchorPrice > 0) {
             uint256 ref = d.anchorPrice;
@@ -114,6 +108,12 @@ contract YoOracle is Ownable2Step, IYoOracle {
 
         d.latestPrice = _sharePrice;
         d.latestTimestamp = nowTs;
+
+        // rotate anchor if window passed
+        if (nowTs - d.anchorTimestamp >= windowSeconds) {
+            d.anchorPrice = _sharePrice;
+            d.anchorTimestamp = nowTs;
+        }
 
         emit SharePriceUpdated(_vault, _sharePrice, nowTs);
     }

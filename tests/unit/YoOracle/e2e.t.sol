@@ -251,8 +251,8 @@ contract YoOracle_Test is Test {
         // Move time forward beyond window
         skip(smallWindow + 1);
 
-        // Second update -> should rotate anchor to previous latest first,
-        // then validate price2 against that anchor, and accept.
+        // Second update -> should validate price2 against current anchor (price1),
+        // then update latest, and rotate anchor to the new price (price2) since window passed.
         vm.prank(updater);
         oracle.updateSharePrice(vault1, price2);
 
@@ -260,9 +260,9 @@ contract YoOracle_Test is Test {
         (uint256 anchorPriceAfter, uint64 anchorTsAfter) = oracle.getAnchor(vault1);
 
         assertEq(latestPriceAfter, price2, "latestPrice should be updated to second price");
-        assertEq(anchorPriceAfter, price1, "anchor should rotate to previous latest price");
+        assertEq(anchorPriceAfter, price2, "anchor should rotate to new price after window");
         assertGt(anchorTsAfter, anchorTsBefore, "anchor timestamp should move forward");
-        assertGe(latestTsAfter, anchorTsAfter, "latest timestamp should be >= anchor timestamp");
+        assertEq(latestTsAfter, anchorTsAfter, "latest and anchor timestamps should match after rotation");
     }
 
     function test_updateSharePrice_IsIndependentPerVault() public {
