@@ -41,7 +41,7 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
     /// @dev The maximum fee that can be set for the vault operations. 1e17 = 10%.
     uint256 internal constant MAX_FEE = 1e17;
     /// @dev the address of the oracle contract
-    address public constant ORACLE_ADDRESS = 0x1BAc8D2E0d7d840Bf1b50232F3774257dcdE22Dd;
+    address public constant ORACLE_ADDRESS = 0x6E879d0CcC85085A709eBf5539224f53d0D396B0;
 
     /// @dev the aggregated underlying balances across all strategies/chains, reported by an oracle
     uint256 private deprecated_aggregatedUnderlyingBalances;
