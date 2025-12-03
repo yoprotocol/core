@@ -228,6 +228,12 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
 
     //============================== VIEW FUNCTIONS ===============================
 
+    /// @notice Get the last price per share from the oracle.
+    function lastPricePerShare() public view returns (uint256 price) {
+        (price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        return price;
+    }
+
     /// @notice Get the amount of assets and shares that are pending redemption.
     /// @param user The address of the user.
     function pendingRedeemRequest(address user) public view returns (uint256 assets, uint256 pendingShares) {
@@ -264,17 +270,17 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
     /// @dev Converts assets to shares using the last price per share read from the oracle, ignoring the total assets and total
     /// supply (shares)
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 lastPricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
-        require(lastPricePerShare > 0, Errors.InvalidPrice());
-        return assets.mulDiv(10 ** decimals(), lastPricePerShare, rounding);
+        (uint256 pricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        require(pricePerShare > 0, Errors.InvalidPrice());
+        return assets.mulDiv(10 ** decimals(), pricePerShare, rounding);
     }
 
     /// @dev Converts shares to assets using the last price per share read from the oracle, ignoring the total assets and total
     /// supply (shares)
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 lastPricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
-        require(lastPricePerShare > 0, Errors.InvalidPrice());
-        return shares.mulDiv(lastPricePerShare, 10 ** decimals(), rounding);
+        (uint256 pricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        require(pricePerShare > 0, Errors.InvalidPrice());
+        return shares.mulDiv(pricePerShare, 10 ** decimals(), rounding);
     }
 
     /// @dev Preview taking an entry fee on deposit. See {IERC4626-previewDeposit}.
