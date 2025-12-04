@@ -228,6 +228,11 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
 
     //============================== VIEW FUNCTIONS ===============================
 
+    function totalAssets() public view override returns (uint256) {
+        (uint256 price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        return price.mulDiv(super.totalAssets(), 10 ** decimals(), Math.Rounding.Floor);
+    }
+
     /// @notice Get the last price per share from the oracle.
     function lastPricePerShare() public view returns (uint256 price) {
         (price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
