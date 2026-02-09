@@ -21,14 +21,13 @@ contract YoToken is ERC20Upgradeable, AuthUpgradeable {
     function initialize(address _owner, string memory _name, string memory _symbol) public initializer {
         __ERC20_init(_name, _symbol);
         __Auth_init(_owner, Authority(address(0)));
-        _mint(msg.sender, 1_000_000_000 * (10 ** uint256(decimals())));
+        super._update(address(0), _owner, 1_000_000_000 * (10 ** uint256(decimals())));
     }
 
     function _update(address from, address to, uint256 value) internal virtual override requiresAuth {
         super._update(from, to, value);
     }
 
-    // `burn` is added to the external interface
     function burn(uint256 amount) external {
         _burn(msg.sender, amount);
     }

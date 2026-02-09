@@ -36,6 +36,9 @@ library Errors {
 
     error UseOnSharePriceUpdate();
 
+    /// @notice Thrown when the price is zero
+    error InvalidPrice();
+
     /// @notice Thrown when the receiver is zero
     error ZeroReceiver();
 

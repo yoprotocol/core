@@ -20,15 +20,10 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 //  \ V / _ \| |_) | '__/ _ \| __/ _ \ / __/ _ \| |
 //   | | (_) |  __/| | | (_) | || (_) | (_| (_) | |
 //   |_|\___/|_|   |_|  \___/ \__\___/ \___\___/|_|
-/// @title yoVault_V2 - A simple vault contract that allows for an operator to manage the vault.
-/// @dev This contract is based on the ERC4626 standard and uses the Auth contract for access control.
-/// It provides an asynchronous redeem mechanism that allows users to request a redeem and the operator to fulfill it.
-/// This would allow the operator to move funds to a different chain or strategy before the user can claim the assets.
-/// If the vault has enough assets to fulfill the request, the assets are withdrawn and returned to the owner
-/// immediately. Otherwise, the assets are transferred to the vault and the request is stored until the operator
-/// fulfills it.
-
-contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, PausableUpgradeable {
+/// @title yoUSDT - Yo Protocol extension for USDT. 95% of the funds are relayed to yoUSD on deposit.
+/// The remaining 5% is used for instant redemption. yoUSDT shares the same oracle as yoUSD,
+/// which means that the price of yoUSDT is the same as the price of yoUSD.
+contract yoUSDT is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, PausableUpgradeable {
     using Math for uint256;
     using Address for address;
     using SafeERC20 for IERC20;
@@ -48,8 +43,11 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
     uint256 internal constant DENOMINATOR = 1e18;
     /// @dev The maximum fee that can be set for the vault operations. 1e17 = 10%.
     uint256 internal constant MAX_FEE = 1e17;
+    /// @dev The percentage of assets to relay to yoUSD on deposit. 95e16 = 95%.
+    uint256 internal constant RELAY_PERCENTAGE = 95e16;
     /// @dev the address of the oracle contract
     address public constant ORACLE_ADDRESS = 0x6E879d0CcC85085A709eBf5539224f53d0D396B0;
+    address public constant YO_USD_ADDRESS = 0x0000000f2eB9f69274678c76222B35eEc7588a65;
 
     /// @dev the aggregated underlying balances across all strategies/chains, reported by an oracle
     uint256 private deprecated_aggregatedUnderlyingBalances;
@@ -237,13 +235,13 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
     //============================== VIEW FUNCTIONS ===============================
 
     function totalAssets() public view override returns (uint256) {
-        (uint256 price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        (uint256 price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(YO_USD_ADDRESS);
         return price.mulDiv(super.totalSupply(), 10 ** decimals(), Math.Rounding.Floor);
     }
 
     /// @notice Get the last price per share from the oracle.
     function lastPricePerShare() public view returns (uint256 price) {
-        (price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        (price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(YO_USD_ADDRESS);
         return price * (10 ** (18 - decimals()));
     }
 
@@ -283,7 +281,7 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
     /// @dev Converts assets to shares using the last price per share read from the oracle, ignoring the total assets and total
     /// supply (shares)
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 pricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        (uint256 pricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(YO_USD_ADDRESS);
         require(pricePerShare > 0, Errors.InvalidPrice());
         return assets.mulDiv(10 ** decimals(), pricePerShare, rounding);
     }
@@ -291,7 +289,7 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
     /// @dev Converts shares to assets using the last price per share read from the oracle, ignoring the total assets and total
     /// supply (shares)
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 pricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        (uint256 pricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(YO_USD_ADDRESS);
         require(pricePerShare > 0, Errors.InvalidPrice());
         return shares.mulDiv(pricePerShare, 10 ** decimals(), rounding);
     }
@@ -384,6 +382,13 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
 
         if (feeAmount > 0 && recipient != address(0)) {
             IERC20(asset()).safeTransfer(recipient, feeAmount);
+        }
+
+        // Relay 95% of deposited assets (after fee) to yoUSD
+        uint256 assetsAfterFee = assets - feeAmount;
+        uint256 relayAmount = assetsAfterFee.mulDiv(RELAY_PERCENTAGE, DENOMINATOR, Math.Rounding.Floor);
+        if (relayAmount > 0) {
+            IERC20(asset()).safeTransfer(YO_USD_ADDRESS, relayAmount);
         }
     }
 
