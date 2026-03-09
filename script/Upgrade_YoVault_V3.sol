@@ -4,6 +4,9 @@ pragma solidity >=0.8.28 <0.9.0;
 import "forge-std/Script.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { YoVault_V3 } from "src/YoVault_V3.sol";
 import { BaseScript } from "./Base.s.sol";
