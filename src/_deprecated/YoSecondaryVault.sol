@@ -22,6 +22,7 @@ contract YoSecondaryVault is YoVault {
         aggregatedUnderlyingBalances = 0;
     }
 
+    // solhint-disable-next-line no-unused-vars
     function onUnderlyingBalanceUpdate(uint256 newUnderlyingBalance) external override requiresAuth {
         revert Errors.UseOnSharePriceUpdate();
     }
