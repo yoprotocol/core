@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import {YoOracle} from "src/YoOracle.sol";
-import {IYoOracle} from "src/interfaces/IYoOracle.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import { YoOracle } from "src/YoOracle.sol";
+import { IYoOracle } from "src/interfaces/IYoOracle.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract YoOracle_Test is Test {
     // --------------------------------- State ---------------------------------
@@ -150,7 +150,7 @@ contract YoOracle_Test is Test {
         vm.prank(updater);
         oracle.updateSharePrice(vault1, price2);
 
-        (uint256 latestPrice, ) = oracle.getLatestPrice(vault1);
+        (uint256 latestPrice,) = oracle.getLatestPrice(vault1);
         assertEq(latestPrice, price2, "latestPrice should be updated with default config");
     }
 
@@ -274,8 +274,8 @@ contract YoOracle_Test is Test {
         oracle.updateSharePrice(vault2, priceVault2_1);
         vm.stopPrank();
 
-        (uint256 latest1, ) = oracle.getLatestPrice(vault1);
-        (uint256 latest2, ) = oracle.getLatestPrice(vault2);
+        (uint256 latest1,) = oracle.getLatestPrice(vault1);
+        (uint256 latest2,) = oracle.getLatestPrice(vault2);
 
         assertEq(latest1, priceVault1_1, "vault1 latestPrice mismatch");
         assertEq(latest2, priceVault2_1, "vault2 latestPrice mismatch");

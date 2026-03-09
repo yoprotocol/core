@@ -26,9 +26,8 @@ contract ManageMultipleCalls_Unit_Concrete_Test is Base_Test {
         vm.startPrank({ msgSender: users.admin });
 
         for (uint256 i = 0; i < mockTargets.length; i++) {
-            MockAuthority(address(depositVault.authority())).setRoleCapability(
-                ADMIN_ROLE, mockTargets[i], targetfunctionSig, true
-            );
+            MockAuthority(address(depositVault.authority()))
+                .setRoleCapability(ADMIN_ROLE, mockTargets[i], targetfunctionSig, true);
         }
     }
 
@@ -49,9 +48,8 @@ contract ManageMultipleCalls_Unit_Concrete_Test is Base_Test {
     function test_ManageMultipleCall_Revert_TargetMethodNotAuthorized() public {
         // Remove the capability
         for (uint256 i = 0; i < mockTargets.length; i++) {
-            MockAuthority(address(depositVault.authority())).setRoleCapability(
-                ADMIN_ROLE, mockTargets[i], targetfunctionSig, false
-            );
+            MockAuthority(address(depositVault.authority()))
+                .setRoleCapability(ADMIN_ROLE, mockTargets[i], targetfunctionSig, false);
         }
 
         vm.expectRevert(

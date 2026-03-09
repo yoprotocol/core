@@ -21,9 +21,8 @@ contract ManageSingleCall_Unit_Concrete_Test is Base_Test {
         mockTarget = address(new MockTarget());
 
         vm.startPrank({ msgSender: users.admin });
-        MockAuthority(address(depositVault.authority())).setRoleCapability(
-            ADMIN_ROLE, mockTarget, targetfunctionSig, true
-        );
+        MockAuthority(address(depositVault.authority()))
+            .setRoleCapability(ADMIN_ROLE, mockTarget, targetfunctionSig, true);
     }
 
     function test_ManageSingleCall_Success() public {
@@ -40,9 +39,8 @@ contract ManageSingleCall_Unit_Concrete_Test is Base_Test {
 
     function test_ManageSingleCall_Revert_TargetMethodNotAuthorized() public {
         // Remove the capability
-        MockAuthority(address(depositVault.authority())).setRoleCapability(
-            ADMIN_ROLE, mockTarget, targetfunctionSig, false
-        );
+        MockAuthority(address(depositVault.authority()))
+            .setRoleCapability(ADMIN_ROLE, mockTarget, targetfunctionSig, false);
         vm.expectRevert(
             abi.encodeWithSelector(Errors.TargetMethodNotAuthorized.selector, mockTarget, targetfunctionSig)
         );

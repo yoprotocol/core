@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IYoOracle} from "./interfaces/IYoOracle.sol";
+import { IYoOracle } from "./interfaces/IYoOracle.sol";
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /**
  * @title YoOracle
@@ -22,7 +22,7 @@ contract YoOracle is Ownable2Step, IYoOracle {
     uint64 public constant BPS_DENOMINATOR = 1_000_000_000;
 
     address public updater;
-    mapping(address => AssetOracleData) public oracleData;
+    mapping(address vault => AssetOracleData oracleData) public oracleData;
 
     constructor(address _updater, uint64 _defaultWindowSeconds, uint64 _defaultMaxChangeBps) Ownable(msg.sender) {
         require(_updater != address(0), InvalidConfig());
@@ -50,7 +50,8 @@ contract YoOracle is Ownable2Step, IYoOracle {
         return (d.anchorPrice, d.anchorTimestamp);
     }
 
-    /// @notice Set the updater for the oracle. The updater is the address that can update the share price for a given vault.
+    /// @notice Set the updater for the oracle. The updater is the address that can
+    /// update the share price for a given vault.
     /// @param _updater The address of the updater.
     function setUpdater(address _updater) external onlyOwner {
         require(_updater != address(0), InvalidConfig());
@@ -71,7 +72,9 @@ contract YoOracle is Ownable2Step, IYoOracle {
         emit AssetConfigUpdated(_vault, _windowSeconds, _maxChangeBps);
     }
 
-    /// @notice Update the share price for a given vault. The update will fail if the share price is different than the anchor price by more than the max change bps. The anchor price is updated if the window seconds have passed.
+    /// @notice Update the share price for a given vault.
+    /// The update will fail if the share price is different than the anchor price by more than the max change bps.
+    ///The anchor price is updated if the window seconds have passed.
     /// @param _vault The address of the vault.
     /// @param _sharePrice The new share price.
     /// @dev The update will fail if the sender is not the updater.

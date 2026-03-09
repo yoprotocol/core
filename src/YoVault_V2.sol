@@ -1,75 +1,72 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Errors} from "./libraries/Errors.sol";
-import {IYoVault} from "./interfaces/IYoVault.sol";
-import {IYoOracle} from "./interfaces/IYoOracle.sol";
+import { Errors } from "./libraries/Errors.sol";
+import { IYoVault } from "./interfaces/IYoVault.sol";
+import { IYoOracle } from "./interfaces/IYoOracle.sol";
 
-import {Compatible} from "./base/Compatible.sol";
-import {AuthUpgradeable, Authority} from "./base/AuthUpgradeable.sol";
+import { Compatible } from "./base/Compatible.sol";
+import { AuthUpgradeable, Authority } from "./base/AuthUpgradeable.sol";
 
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ERC4626Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 // __   __    ____            _                  _
 // \ \ / /__ |  _ \ _ __ ___ | |_ ___   ___ ___ | |
 //  \ V / _ \| |_) | '__/ _ \| __/ _ \ / __/ _ \| |
 //   | | (_) |  __/| | | (_) | || (_) | (_| (_) | |
 //   |_|\___/|_|   |_|  \___/ \__\___/ \___\___/|_|
-/// @title yoVault_V2 - A simple vault contract that allows for an operator to manage the vault.
-/// @dev This contract is based on the ERC4626 standard and uses the Auth contract for access control.
-/// It provides an asynchronous redeem mechanism that allows users to request a redeem and the operator to fulfill it.
-/// This would allow the operator to move funds to a different chain or strategy before the user can claim the assets.
-/// If the vault has enough assets to fulfill the request, the assets are withdrawn and returned to the owner
-/// immediately. Otherwise, the assets are transferred to the vault and the request is stored until the operator
-/// fulfills it.
+/// @title YoVault_V2 - Operator-managed ERC4626 vault with asynchronous redemptions.
+/// @dev Extends ERC4626 with role-based access control and an async redeem mechanism.
+/// Users call `requestRedeem` — if the vault holds enough assets the withdrawal is instant,
+/// otherwise shares are escrowed until the operator calls `fulfillRedeem`.
+/// Oracle-driven pricing: share conversions query `_oracleAsset()` via `ORACLE_ADDRESS`,
+/// which subclasses can override to price against a different asset.
 
 contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable, PausableUpgradeable {
     using Math for uint256;
     using Address for address;
     using SafeERC20 for IERC20;
 
-    /// @dev A slot for storing an address value.
+    /// @dev Helper struct for reading an address from a storage slot.
     struct AddressSlot {
         address value;
     }
 
-    /// @dev The slot for the implementation contract.
+    /// @dev ERC-1967 implementation slot.
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
-    /// @dev Assume requests are non-fungible and all have ID = 0, so we can differentiate between a request ID and the
-    /// assets amount.
+    /// @dev Non-fungible request sentinel — all pending redeems share ID 0.
     uint256 internal constant REQUEST_ID = 0;
-    /// @dev The denominator used for precision calculations.
+    /// @dev 1e18 precision denominator for fee and percentage calculations.
     uint256 internal constant DENOMINATOR = 1e18;
-    /// @dev The maximum fee that can be set for the vault operations. 1e17 = 10%.
+    /// @dev Maximum allowed fee (10%).
     uint256 internal constant MAX_FEE = 1e17;
-    /// @dev the address of the oracle contract
+    /// @dev YoOracle contract used for share-price lookups.
     address public constant ORACLE_ADDRESS = 0x6E879d0CcC85085A709eBf5539224f53d0D396B0;
 
-    /// @dev the aggregated underlying balances across all strategies/chains, reported by an oracle
+    /// @dev Deprecated — preserved for storage-layout compatibility.
     uint256 private deprecated_aggregatedUnderlyingBalances;
-    /// @dev the last block number when the aggregated underlying balances were updated
+    /// @dev Deprecated — preserved for storage-layout compatibility.
     uint256 private deprecated_lastBlockUpdated;
-    /// @dev the last price per share calculated after the aggregated underlying balances are reported
+    /// @dev Deprecated — preserved for storage-layout compatibility.
     uint256 private deprecated_lastPricePerShare;
-    /// @dev the total amount of assets that are pending redemption
+    /// @notice Total assets locked in pending redemption requests.
     uint256 public totalPendingAssets;
-    /// @dev the maximum percentage change allowed before the vault is paused. It can be updated by the owner.
-    /// 1e18 = 100%. It's value depends on the frequency of the oracle updates.
+    /// @dev Deprecated — preserved for storage-layout compatibility.
     uint256 private deprecated_maxPercentageChange;
-    /// @dev the fee charged for the withdraws, it's a percentage of the assets redeemed
+    /// @notice Withdrawal fee as an 18-decimal fraction (e.g. 1e16 = 1%).
     uint256 public feeOnWithdraw;
-    /// @dev the fee charged for the deposits, it's a percentage of the assets deposited
+    /// @notice Deposit fee as an 18-decimal fraction (e.g. 1e16 = 1%).
     uint256 public feeOnDeposit;
-    /// @dev the address that receives the fees for the vault operations, if it's zero, no fees are charged
+    /// @notice Recipient of collected fees. No fees are collected when zero.
     address public feeRecipient;
 
-    /// @dev used to store the amount of shares that are pending redemption, it must be fulfilled by the vault operator
+    /// @dev Per-user pending redemption state, fulfilled by the vault operator.
     mapping(address user => PendingRedeem redeem) internal _pendingRedeem;
 
     //============================== CONSTRUCTOR ===============================
@@ -90,33 +87,40 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
 
     // ========================================= PUBLIC FUNCTIONS =========================================
 
-    /// @notice Allows the vault operator to manage the vault.
-    /// @param target The target contract to make a call to.
-    /// @param data The data to send to the target contract.
-    /// @param value The amount of native assets to send with the call.
+    /// @notice Execute an authorized call to an external contract.
+    /// @param target Contract to call.
+    /// @param data Calldata forwarded to `target`.
+    /// @param value Native currency (wei) sent with the call.
     function manage(
         address target,
         bytes calldata data,
         uint256 value
-    ) external requiresAuth returns (bytes memory result) {
+    )
+        external
+        requiresAuth
+        returns (bytes memory result)
+    {
         bytes4 functionSig = bytes4(data);
         require(
-            authority().canCall(msg.sender, target, functionSig),
-            Errors.TargetMethodNotAuthorized(target, functionSig)
+            authority().canCall(msg.sender, target, functionSig), Errors.TargetMethodNotAuthorized(target, functionSig)
         );
 
         result = target.functionCallWithValue(data, value);
     }
 
-    /// @notice Same as `manage` but allows for multiple calls in a single transaction.
-    /// @param targets The target contracts to make calls to.
-    /// @param data The data to send to the target contracts.
-    /// @param values The amounts of native assets to send with the calls.
+    /// @notice Batch version of {manage} — execute multiple authorized calls atomically.
+    /// @param targets Contracts to call.
+    /// @param data Calldata arrays forwarded to each `target`.
+    /// @param values Native currency (wei) sent with each call.
     function manage(
         address[] calldata targets,
         bytes[] calldata data,
         uint256[] calldata values
-    ) external requiresAuth returns (bytes[] memory results) {
+    )
+        external
+        requiresAuth
+        returns (bytes[] memory results)
+    {
         uint256 targetsLength = targets.length;
         results = new bytes[](targetsLength);
         for (uint256 i; i < targetsLength; ++i) {
@@ -129,25 +133,24 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         }
     }
 
-    /// @notice Pause the contract to prevent any further deposits, withdrawals, or transfers.
+    /// @notice Pause deposits, withdrawals, and transfers.
     function pause() public requiresAuth {
         _pause();
     }
 
-    /// @notice Unpause the contract to allow deposits, withdrawals, and transfers.
+    /// @notice Resume deposits, withdrawals, and transfers.
     function unpause() public requiresAuth {
         _unpause();
     }
 
-    /// @notice If the vault has enough assets to fulfill the request,
-    /// withdraw the assets and return them to the owner.
-    /// Otherwise, transfer the shares to the vault and store the request.
-    /// The shares are burned when the request is fulfilled and the assets are transferred to the owner.
-    /// @param shares The amount of shares to redeem.
-    /// @param receiver The address of the receiver of the assets.
-    /// @param owner The address of the owner.
-    /// @return The ID of the request which is always 0 or the assets amount if the request is immediately
-    /// processed.
+    /// @notice Request an asynchronous redemption of `shares`.
+    /// If the vault holds enough liquid assets the withdrawal is executed instantly and the
+    /// returned value equals the redeemed asset amount. Otherwise the shares are escrowed and
+    /// `REQUEST_ID` (0) is returned — the operator must later call {fulfillRedeem}.
+    /// @param shares Amount of shares to redeem.
+    /// @param receiver Address that will receive the underlying assets.
+    /// @param owner Share holder (must equal `msg.sender`).
+    /// @return Asset amount on instant redemption, or `REQUEST_ID` (0) when queued.
     function requestRedeem(uint256 shares, address receiver, address owner) public whenNotPaused returns (uint256) {
         require(receiver != address(0), Errors.ZeroReceiver());
         require(shares > 0, Errors.SharesAmountZero());
@@ -175,10 +178,10 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         return REQUEST_ID;
     }
 
-    /// @notice The operator can fulfill a redeem request. Requires authorization.
-    /// @param receiver The address of the receiver of the assets.
-    /// @param shares The amount of shares to fulfil.
-    /// @param assetsWithFee The amount of assets to fulfil including the fee.
+    /// @notice Fulfill a pending redemption — burns escrowed shares and transfers assets.
+    /// @param receiver Address whose pending request is being fulfilled.
+    /// @param shares Amount of escrowed shares to burn.
+    /// @param assetsWithFee Gross asset amount (including withdrawal fee).
     function fulfillRedeem(address receiver, uint256 shares, uint256 assetsWithFee) external requiresAuth {
         PendingRedeem storage pending = _pendingRedeem[receiver];
         require(pending.shares != 0 && shares <= pending.shares, Errors.InvalidSharesAmount());
@@ -193,10 +196,10 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         _withdraw(address(this), receiver, address(this), assetsWithFee, shares);
     }
 
-    /// @notice The operator can cancel a redeem request in case of an black swan event.
-    /// @param receiver The address of the receiver of the assets.
-    /// @param shares The amount of shares to cancel.
-    /// @param assetsWithFee The amount of assets to cancel including the fee.
+    /// @notice Cancel a pending redemption — returns escrowed shares to the receiver.
+    /// @param receiver Address whose pending request is being cancelled.
+    /// @param shares Amount of escrowed shares to return.
+    /// @param assetsWithFee Gross asset amount to release from the pending total.
     function cancelRedeem(address receiver, uint256 shares, uint256 assetsWithFee) external requiresAuth {
         PendingRedeem storage pending = _pendingRedeem[receiver];
         require(pending.shares != 0 && shares <= pending.shares, Errors.InvalidSharesAmount());
@@ -211,24 +214,24 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         _transfer(address(this), receiver, shares);
     }
 
-    /// @notice Update the fee charged for the vault operations.
-    /// @param newFee The new fee charged for the vault operations.
+    /// @notice Set the withdrawal fee. Must be below {MAX_FEE}.
+    /// @param newFee New withdrawal fee as an 18-decimal fraction.
     function updateWithdrawFee(uint256 newFee) external requiresAuth {
         require(newFee < MAX_FEE, Errors.InvalidFee());
         emit WithdrawFeeUpdated(feeOnWithdraw, newFee);
         feeOnWithdraw = newFee;
     }
 
-    /// @notice Update the fee charged for the vault operations.
-    /// @param newFee The new fee charged for the vault operations.
+    /// @notice Set the deposit fee. Must be below {MAX_FEE}.
+    /// @param newFee New deposit fee as an 18-decimal fraction.
     function updateDepositFee(uint256 newFee) external requiresAuth {
         require(newFee < MAX_FEE, Errors.InvalidFee());
         emit DepositFeeUpdated(feeOnDeposit, newFee);
         feeOnDeposit = newFee;
     }
 
-    /// @notice Update the address that receives the fees for the vault operations.
-    /// @param newFeeRecipient The new address that receives the fees for the vault operations.
+    /// @notice Set the fee recipient. Pass `address(0)` to disable fee collection.
+    /// @param newFeeRecipient Address that will receive future fees.
     function updateFeeRecipient(address newFeeRecipient) external requiresAuth {
         emit FeeRecipientUpdated(feeRecipient, newFeeRecipient);
         feeRecipient = newFeeRecipient;
@@ -236,99 +239,102 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
 
     //============================== VIEW FUNCTIONS ===============================
 
+    /// @notice Total assets under management, derived from oracle price and total share supply.
     function totalAssets() public view override returns (uint256) {
-        (uint256 price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        (uint256 price,) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(_oracleAsset());
         return price.mulDiv(super.totalSupply(), 10 ** decimals(), Math.Rounding.Floor);
     }
 
-    /// @notice Get the last price per share from the oracle.
+    /// @notice Oracle price per share, normalized to 18 decimals.
     function lastPricePerShare() public view returns (uint256 price) {
-        (price, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        (price,) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(_oracleAsset());
         return price * (10 ** (18 - decimals()));
     }
 
-    /// @notice Get the amount of assets and shares that are pending redemption.
-    /// @param user The address of the user.
+    /// @notice Pending redemption state for a given user.
+    /// @param user Address to query.
     function pendingRedeemRequest(address user) public view returns (uint256 assets, uint256 pendingShares) {
         return (_pendingRedeem[user].assets, _pendingRedeem[user].shares);
     }
 
     //============================== OVERRIDES ===============================
 
-    /// @dev Override the default `deposit` function to add the `whenNotPaused` modifier.
+    /// @inheritdoc ERC4626Upgradeable
+    /// @dev Reverts when paused.
     function deposit(uint256 assets, address receiver) public override whenNotPaused returns (uint256) {
         return super.deposit(assets, receiver);
     }
 
-    /// @dev Override the default `mint` function to add the `whenNotPaused` modifier.
+    /// @inheritdoc ERC4626Upgradeable
+    /// @dev Reverts when paused.
     function mint(uint256 shares, address receiver) public override whenNotPaused returns (uint256) {
         return super.mint(shares, receiver);
     }
 
-    /// @notice This method is disabled. Use `requestRedeem` or `redeem`instead.
+    /// @notice Disabled — always reverts. Use {requestRedeem} or {redeem} instead.
     function withdraw(uint256, address, address) public override whenNotPaused returns (uint256) {
         revert Errors.UseRequestRedeem();
     }
 
+    /// @notice Delegates to {requestRedeem}.
     function redeem(uint256 shares, address receiver, address owner) public override whenNotPaused returns (uint256) {
         return requestRedeem(shares, receiver, owner);
     }
 
-    /// @dev Override the default `_update` function to add the `whenNotPaused` modifier.
-    /// The _update function is called on all transfers, mints and burns.
+    /// @dev Enforces pause on all token movements (transfers, mints, burns).
     function _update(address from, address to, uint256 value) internal override whenNotPaused {
         super._update(from, to, value);
     }
 
-    /// @dev Converts assets to shares using the last price per share read from the oracle, ignoring the total assets and total
-    /// supply (shares)
+    /// @dev Oracle-driven asset→share conversion (ignores totalSupply/totalAssets).
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 pricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        (uint256 pricePerShare,) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(_oracleAsset());
         require(pricePerShare > 0, Errors.InvalidPrice());
         return assets.mulDiv(10 ** decimals(), pricePerShare, rounding);
     }
 
-    /// @dev Converts shares to assets using the last price per share read from the oracle, ignoring the total assets and total
-    /// supply (shares)
+    /// @dev Oracle-driven share→asset conversion (ignores totalSupply/totalAssets).
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 pricePerShare, ) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(address(this));
+        (uint256 pricePerShare,) = IYoOracle(ORACLE_ADDRESS).getLatestPrice(_oracleAsset());
         require(pricePerShare > 0, Errors.InvalidPrice());
         return shares.mulDiv(pricePerShare, 10 ** decimals(), rounding);
     }
 
-    /// @notice Get the implementation contract address of a proxy.
+    /// @notice Returns the ERC-1967 implementation address.
     function getImplementation() external view returns (address) {
         AddressSlot storage r;
+        // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             r.slot := _IMPLEMENTATION_SLOT
         }
         return r.value;
     }
 
-    /// @dev Preview taking an entry fee on deposit. See {IERC4626-previewDeposit}.
+    /// @dev Fee-adjusted deposit preview. See {IERC4626-previewDeposit}.
     function previewDeposit(uint256 assets) public view virtual override returns (uint256) {
         uint256 fee = _feeOnTotal(assets, feeOnDeposit);
         return super.previewDeposit(assets - fee);
     }
 
-    /// @dev Preview adding an entry fee on mint. See {IERC4626-previewMint}.
+    /// @dev Fee-adjusted mint preview. See {IERC4626-previewMint}.
     function previewMint(uint256 shares) public view virtual override returns (uint256) {
         uint256 assets = super.previewMint(shares);
         return assets + _feeOnRaw(assets, feeOnDeposit);
     }
 
-    /// @dev Preview adding an exit fee on withdraw. See {IERC4626-previewWithdraw}.
+    /// @dev Fee-adjusted withdraw preview. See {IERC4626-previewWithdraw}.
     function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
         uint256 fee = _feeOnRaw(assets, feeOnWithdraw);
         return super.previewWithdraw(assets + fee);
     }
 
-    /// @dev Preview taking an exit fee on redeem. See {IERC4626-previewRedeem}.
+    /// @dev Fee-adjusted redeem preview. See {IERC4626-previewRedeem}.
     function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
         uint256 assets = super.previewRedeem(shares);
         return assets - _feeOnTotal(assets, feeOnWithdraw);
     }
 
+    /// @dev Returns 0 when paused. See {IERC4626-maxDeposit}.
     function maxDeposit(address receiver) public view virtual override returns (uint256) {
         if (paused()) {
             return 0;
@@ -336,6 +342,7 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         return super.maxDeposit(receiver);
     }
 
+    /// @dev Returns 0 when paused. See {IERC4626-maxMint}.
     function maxMint(address receiver) public view virtual override returns (uint256) {
         if (paused()) {
             return 0;
@@ -343,6 +350,7 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         return super.maxMint(receiver);
     }
 
+    /// @dev Returns 0 when paused. See {IERC4626-maxWithdraw}.
     function maxWithdraw(address owner) public view virtual override returns (uint256) {
         if (paused()) {
             return 0;
@@ -350,6 +358,7 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         return super.maxWithdraw(owner);
     }
 
+    /// @dev Returns 0 when paused. See {IERC4626-maxRedeem}.
     function maxRedeem(address owner) public view virtual override returns (uint256) {
         if (paused()) {
             return 0;
@@ -357,14 +366,17 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         return super.maxRedeem(owner);
     }
 
-    /// @dev Account for the fee charged for the vault operations if the fee recipient and fee are set.
+    /// @dev Deducts the withdrawal fee from `assetsWithFee` and transfers it to {feeRecipient}.
     function _withdraw(
         address caller,
         address receiver,
         address owner,
         uint256 assetsWithFee,
         uint256 shares
-    ) internal override {
+    )
+        internal
+        override
+    {
         uint256 feeAmount = _feeOnTotal(assetsWithFee, feeOnWithdraw);
         uint256 assets = assetsWithFee - feeAmount;
         address recipient = feeRecipient;
@@ -376,7 +388,8 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         }
     }
 
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+    /// @dev Deducts the deposit fee from `assets` and transfers it to {feeRecipient}.
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal virtual override {
         uint256 feeAmount = _feeOnTotal(assets, feeOnDeposit);
         address recipient = feeRecipient;
 
@@ -387,22 +400,26 @@ contract YoVault_V2 is ERC4626Upgradeable, Compatible, IYoVault, AuthUpgradeable
         }
     }
 
-    //============================== PRIVATE FUNCTIONS ===============================
+    //============================== INTERNAL FUNCTIONS ===============================
 
-    /// @dev Calculates the fees that should be added to an amount `assets` that does not already include fees.
-    /// Used in {IERC4626-mint} and {IERC4626-withdraw} operations.
-    function _feeOnRaw(uint256 assets, uint256 feeBasisPoints) private pure returns (uint256) {
+    /// @dev Address passed to the oracle for share-price lookups.
+    /// Override to price shares against a different asset (see {yoUSDT}).
+    function _oracleAsset() internal view virtual returns (address) {
+        return address(this);
+    }
+
+    /// @dev Fee to add on top of a raw (fee-exclusive) amount. Used by {previewMint} and {previewWithdraw}.
+    function _feeOnRaw(uint256 assets, uint256 feeBasisPoints) internal pure returns (uint256) {
         return assets.mulDiv(feeBasisPoints, DENOMINATOR, Math.Rounding.Ceil);
     }
 
-    /// @dev Calculates the fee part of an amount `assets` that already includes fees.
-    /// Used in {IERC4626-deposit} and {IERC4626-redeem} operations.
-    function _feeOnTotal(uint256 assets, uint256 feeBasisPoints) private pure returns (uint256) {
+    /// @dev Fee portion already embedded in a gross (fee-inclusive) amount. Used by {previewDeposit} and
+    /// {previewRedeem}.
+    function _feeOnTotal(uint256 assets, uint256 feeBasisPoints) internal pure returns (uint256) {
         return assets.mulDiv(feeBasisPoints, feeBasisPoints + DENOMINATOR, Math.Rounding.Ceil);
     }
 
-    /// @dev The available balance is the balance of the vault minus the total pending assets.
-    /// @return The available balance.
+    /// @dev Liquid balance available for instant redemptions (total balance minus pending claims).
     function _getAvailableBalance() internal view returns (uint256) {
         uint256 balance = IERC20(asset()).balanceOf(address(this));
         return balance > totalPendingAssets ? balance - totalPendingAssets : 0;

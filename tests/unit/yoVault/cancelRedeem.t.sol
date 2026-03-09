@@ -2,12 +2,9 @@
 pragma solidity 0.8.28;
 
 import { Base_Test } from "./Base.t.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { Errors } from "src/libraries/Errors.sol";
 
-contract Deposit_Unit_Concrete_Test is Base_Test {
-    using Math for uint256;
-
+contract CancelRedeem_Unit_Concrete_Test is Base_Test {
     uint256 internal amount = 100 * 1e6;
     uint256 internal aliceShares;
 
@@ -18,7 +15,6 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         depositVault.deposit(amount, users.alice);
 
         moveAssetsFromVault(amount);
-        updateUnderlyingBalance(amount);
 
         vm.startPrank({ msgSender: users.alice });
         aliceShares = depositVault.balanceOf(users.alice);
@@ -26,7 +22,6 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
         vm.roll(block.number + 1);
         usdc.transfer(address(depositVault), amount);
-        updateUnderlyingBalance(0);
     }
 
     function test_cancel_redeem() public {
@@ -41,12 +36,9 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         (uint256 pendingAssetsAfter, uint256 pendingSharesAfter) = depositVault.pendingRedeemRequest(users.alice);
         uint256 aliceSharesAfter = depositVault.balanceOf(users.alice);
 
-        assertTrue(
-            totalPendingAssetsAfter == totalPendingAssets - pendingShares,
-            "Total pending assets after is not the difference"
-        );
-        assertTrue(pendingAssetsAfter == 0, "Pending assets after is not 0");
-        assertTrue(pendingSharesAfter == 0, "Pending shares after is not 0");
+        assertEq(totalPendingAssetsAfter, totalPendingAssets - pendingShares);
+        assertEq(pendingAssetsAfter, 0);
+        assertEq(pendingSharesAfter, 0);
         assertEq(aliceSharesAfter, aliceSharesBefore + pendingShares, "Alice did not receive the pending shares back");
     }
 

@@ -14,7 +14,9 @@ import { Events } from "../../utils/Events.sol";
 import { Constants } from "../../utils/Constants.sol";
 import { MockAuthority } from "../../mocks/MockAuthority.sol";
 
-import { YoVault } from "src/YoVault.sol";
+import { IYoOracle } from "src/interfaces/IYoOracle.sol";
+import { YoVault_V2 } from "src/YoVault_V2.sol";
+import { YoVaultHarness } from "../../mocks/YoVaultHarness.sol";
 
 /// @notice Base test contract with common logic needed by all tests.
 
@@ -26,7 +28,7 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
 
     // ====================================== TEST CONTRACTS =======================================
     IERC20 internal usdc;
-    YoVault internal depositVault;
+    YoVaultHarness internal depositVault;
     Authority internal authority;
 
     // ====================================== SET-UP FUNCTION ======================================
@@ -47,6 +49,9 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         vm.startPrank({ msgSender: users.admin });
 
         deployDepositVault();
+
+        // Mock oracle to return 1:1 price (1e6 for USDC's 6 decimals).
+        setOraclePrice(1e6);
 
         // Create users for testing.
         (users.bob, users.bobKey) = createUser("Bob");
@@ -71,15 +76,14 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         return (payable(user), key);
     }
 
-    /// @dev Deploys the yoVault
     function deployDepositVault() internal {
-        YoVault vault = new YoVault();
+        YoVaultHarness vault = new YoVaultHarness();
 
         bytes memory data =
-            abi.encodeWithSelector(YoVault.initialize.selector, usdc, users.admin, "yoUSDCVault", "yoUSDC");
+            abi.encodeWithSelector(YoVault_V2.initialize.selector, usdc, users.admin, "yoUSDCVault", "yoUSDC");
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(vault), users.admin, data);
-        depositVault = YoVault(payable(address(proxy)));
+        depositVault = YoVaultHarness(payable(address(proxy)));
 
         authority = new MockAuthority(users.admin, Authority(address(0)));
         depositVault.setAuthority({ newAuthority: authority });
@@ -93,18 +97,19 @@ abstract contract Base_Test is Test, Events, Utils, Constants {
         vm.startPrank({ msgSender: users.admin });
         bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, users.admin, assets);
 
-        MockAuthority(address(depositVault.authority())).setRoleCapability(
-            ADMIN_ROLE, address(usdc), IERC20.transfer.selector, true
-        );
+        MockAuthority(address(depositVault.authority()))
+            .setRoleCapability(ADMIN_ROLE, address(usdc), IERC20.transfer.selector, true);
 
         depositVault.manage(address(usdc), data, 0);
 
         vm.stopPrank();
     }
 
-    function updateUnderlyingBalance(uint256 assets) internal {
-        vm.startPrank({ msgSender: users.admin });
-        depositVault.onUnderlyingBalanceUpdate(assets);
-        vm.stopPrank();
+    function setOraclePrice(uint256 price) internal {
+        vm.mockCall(
+            depositVault.ORACLE_ADDRESS(),
+            abi.encodeWithSelector(IYoOracle.getLatestPrice.selector, address(depositVault)),
+            abi.encode(price, uint64(block.timestamp))
+        );
     }
 }

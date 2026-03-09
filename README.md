@@ -1,14 +1,13 @@
 # YO Protocol
 
-![Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg)
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Foundry](https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg) ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
 ## Overview
 
-Yo Protocol provides a modular, ERC4626-compliant vault designed for cross-chain asset management and optimized
-liquidity operations. The vault enables users to deposit assets while providing operators with controlled management
-capabilities, including asset transfers, redemptions, and fee handling. The contract architecture allows seamless
-integration with external strategies, oracles, and cross-chain liquidity mechanisms.
+Yo Protocol provides a modular, ERC4626-compliant vault designed for cross-chain asset management and optimized liquidity operations. The
+vault enables users to deposit assets while providing operators with controlled management capabilities, including asset transfers,
+redemptions, and fee handling. The contract architecture allows seamless integration with external strategies, oracles, and cross-chain
+liquidity mechanisms.
 
 ## Key Features
 
@@ -24,19 +23,17 @@ integration with external strategies, oracles, and cross-chain liquidity mechani
 
 ### Core Contracts
 
-- **[`yoVault.sol`](https://github.com/yoprotocol/core/blob/main/src/yoVault/yoVault.sol)**: Implements the main vault
-  functionality, including deposits, redemptions, and balance tracking.
-- **[`Escrow.sol`](https://github.com/yoprotocol/core/blob/main/src/Escrow.sol)**: An escrow contract for controlled
-  asset withdrawals.
-- **[`Compatible.sol`](https://github.com/yoprotocol/core/blob/main/src/base/Compatible.sol)**: Allows the contract to
-  receive ETH and ERC721/ERC1155 tokens.
-- **[`AuthUpgradeable.sol`](https://github.com/yoprotocol/core/blob/main/src/base/AuthUpgradable.sol)**: Upgradable
-  access control contract.
+- **[`yoVault.sol`](https://github.com/yoprotocol/core/blob/main/src/yoVault/yoVault.sol)**: Implements the main vault functionality,
+  including deposits, redemptions, and balance tracking.
+- **[`Escrow.sol`](https://github.com/yoprotocol/core/blob/main/src/Escrow.sol)**: An escrow contract for controlled asset withdrawals.
+- **[`Compatible.sol`](https://github.com/yoprotocol/core/blob/main/src/base/Compatible.sol)**: Allows the contract to receive ETH and
+  ERC721/ERC1155 tokens.
+- **[`AuthUpgradeable.sol`](https://github.com/yoprotocol/core/blob/main/src/base/AuthUpgradable.sol)**: Upgradable access control contract.
 
 ### Libraries
 
-- **[`Errors.sol`](https://github.com/yoprotocol/core/blob/main/src/libraries/Errors.sol)**: Defines error messages for
-  consistent and gas-efficient error handling.
+- **[`Errors.sol`](https://github.com/yoprotocol/core/blob/main/src/libraries/Errors.sol)**: Defines error messages for consistent and
+  gas-efficient error handling.
 - **OpenZeppelin Libraries**: Uses `SafeERC20`, `Math`, `PausableUpgradeable`, and other battle-tested utilities.
 
 ## Deployment
@@ -85,8 +82,7 @@ $ forge test
 
 - **Upgradeable Design**: The contract is upgradeable via OpenZeppelin proxies.
 - **Restricted Access**: Functions requiring privileged access are protected via `AuthUpgradeable`.
-- **Oracle-Based Pausing**: The contract automatically pauses if detected balance discrepancies exceed a configured
-  threshold.
+- **Oracle-Based Pausing**: The contract automatically pauses if detected balance discrepancies exceed a configured threshold.
 
 ## License
 

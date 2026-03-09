@@ -15,7 +15,7 @@ import { Constants } from "../../utils/Constants.sol";
 import { MockAuthority } from "../../mocks/MockAuthority.sol";
 
 import { YoGateway } from "src/YoGateway.sol";
-import { YoVault } from "src/YoVault.sol";
+import { YoVault_V2 } from "src/YoVault_V2.sol";
 import { YoRegistry } from "src/YoRegistry.sol";
 
 /// @notice Base test contract with common logic needed by all YoGateway tests.
@@ -28,7 +28,7 @@ abstract contract Gateway_Base_Test is Test, Events, Utils, Constants {
 
     // ====================================== TEST CONTRACTS =======================================
     IERC20 internal usdc;
-    YoVault internal yoVault;
+    YoVault_V2 internal yoVault;
     YoGateway internal gateway;
     Authority internal authority;
     YoRegistry internal registry;
@@ -39,15 +39,14 @@ abstract contract Gateway_Base_Test is Test, Events, Utils, Constants {
     // ====================================== SET-UP FUNCTION ======================================
     function setUp() public virtual {
         vm.createSelectFork({
-            blockNumber: 29_066_193,
-            urlOrAlias: vm.envOr("BASE_RPC_URL", string("https://base.llamarpc.com"))
+            blockNumber: 29_066_193, urlOrAlias: vm.envOr("BASE_RPC_URL", string("https://base.llamarpc.com"))
         });
 
         // USDC (https://basescan.org/token/0x833589fcd6edb6e08f4c7c32d4f71b54bda02913)
         usdc = IERC20(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
 
         // Use existing YoVault deployment
-        yoVault = YoVault(payable(0x0000000f2eB9f69274678c76222B35eEc7588a65));
+        yoVault = YoVault_V2(payable(0x0000000f2eB9f69274678c76222B35eEc7588a65));
 
         // Label the base test contracts.
         vm.label({ account: address(usdc), newLabel: "USDC" });

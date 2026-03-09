@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {Errors} from "./libraries/Errors.sol";
+import { Errors } from "../libraries/Errors.sol";
 
-import {YoVault} from "./YoVault.sol";
+import { YoVault } from "./YoVault.sol";
 
 // __   __    ____            _                  _
 // \ \ / /__ |  _ \ _ __ ___ | |_ ___   ___ ___ | |

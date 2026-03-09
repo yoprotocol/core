@@ -2,7 +2,7 @@
 pragma solidity >=0.8.28 <0.9.0;
 
 import "forge-std/Script.sol";
-import { YoVault } from "src/YoVault.sol";
+import { YoVault_V2 } from "src/YoVault_V2.sol";
 import { RolesAuthority } from "@solmate/auth/authorities/RolesAuthority.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -22,7 +22,7 @@ contract Deploy is BaseScript {
     )
         public
         broadcast
-        returns (YoVault vault, RolesAuthority authority)
+        returns (YoVault_V2 vault, RolesAuthority authority)
     {
         console.log("Deploying vault...");
         console.log("Name: ", _name);
@@ -44,12 +44,12 @@ contract Deploy is BaseScript {
             authority = RolesAuthority(_authority);
         }
 
-        YoVault impl;
+        YoVault_V2 impl;
         if (_vault == address(0)) {
-            impl = new YoVault();
+            impl = new YoVault_V2();
             console.log("yoVault implementation deployed at: ", address(impl));
         } else {
-            impl = YoVault(payable(_vault));
+            impl = YoVault_V2(payable(_vault));
         }
         console.log("yoVault implementation deployed at: ", address(impl));
 
@@ -57,7 +57,7 @@ contract Deploy is BaseScript {
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(impl), _owner, data);
 
-        vault = YoVault(payable(address(proxy)));
+        vault = YoVault_V2(payable(address(proxy)));
         console.log("yoVault proxy deployed at: ", address(vault));
 
         vault.setAuthority(authority);

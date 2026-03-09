@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
-import {YoToken} from "src/YoToken.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {MockAuthority} from "../../mocks/MockAuthority.sol";
-import {Authority} from "src/base/AuthUpgradeable.sol";
+import { Test } from "forge-std/Test.sol";
+import { YoToken } from "src/YoToken.sol";
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { MockAuthority } from "../../mocks/MockAuthority.sol";
+import { Authority } from "src/base/AuthUpgradeable.sol";
 
 contract YoToken_Test is Test {
     YoToken internal token;
@@ -47,7 +47,7 @@ contract YoToken_Test is Test {
         // Initialize through proxy as `owner` (NOT proxyAdmin)
 
         token.initialize(owner, "YoToken", "YO");
-        token.setAuthority({newAuthority: authority});
+        token.setAuthority({ newAuthority: authority });
 
         vm.stopPrank();
     }

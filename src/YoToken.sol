@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {AuthUpgradeable, Authority} from "./base/AuthUpgradeable.sol";
+import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import { AuthUpgradeable, Authority } from "./base/AuthUpgradeable.sol";
 
 // __     _________    _
 // \ \   / /__   __|  | |

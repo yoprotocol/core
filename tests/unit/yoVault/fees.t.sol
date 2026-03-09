@@ -2,12 +2,8 @@
 pragma solidity 0.8.28;
 
 import { Base_Test } from "./Base.t.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { console } from "forge-std/console.sol";
 
-contract Deposit_Unit_Concrete_Test is Base_Test {
-    using Math for uint256;
-
+contract Fees_Unit_Concrete_Test is Base_Test {
     uint256 internal depositAmount;
     uint256 internal depositFee;
     uint256 internal withdrawFee;
@@ -28,15 +24,6 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         vm.stopPrank();
     }
 
-    function test_redeem_rounding_issue() public {
-        vm.startPrank({ msgSender: users.alice });
-        depositVault.deposit(1000, users.alice);
-        depositVault.requestRedeem(depositVault.balanceOf(users.alice), users.alice, users.alice);
-        console.log("balance of", usdc.balanceOf(users.alice));
-        console.log("balance of vault", usdc.balanceOf(address(depositVault)));
-        vm.stopPrank();
-    }
-
     function test_deposit_and_redeem_all_fees() public {
         vm.startPrank({ msgSender: users.alice });
 
@@ -45,7 +32,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         uint256 vaultAssetsBeforeDeposit = usdc.balanceOf(address(depositVault));
         uint256 feeRecipientBalanceBeforeDeposit = usdc.balanceOf(feeRecipient);
 
-        uint256 depositFeeAmount = _feeOnTotal(depositAmount, depositFee);
+        uint256 depositFeeAmount = depositVault.exposed_feeOnTotal(depositAmount, depositFee);
         uint256 previewDeposit = depositVault.previewDeposit(depositAmount);
         depositVault.deposit(depositAmount, users.alice);
 
@@ -60,7 +47,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         assertEq(vaultAssetsAfterDeposit, vaultAssetsBeforeDeposit + (depositAmount - depositFeeAmount));
         assertEq(feeRecipientBalanceAfterDeposit, feeRecipientBalanceBeforeDeposit + depositFeeAmount);
 
-        uint256 redeemFeeAmount = _feeOnTotal(aliceSharesAfterDeposit, withdrawFee);
+        uint256 redeemFeeAmount = depositVault.exposed_feeOnTotal(aliceSharesAfterDeposit, withdrawFee);
         uint256 previewRedeem = depositVault.previewRedeem(aliceSharesAfterDeposit);
         depositVault.requestRedeem(aliceSharesAfterDeposit, users.alice, users.alice);
 
@@ -88,7 +75,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         uint256 vaultAssetsBeforeDeposit = usdc.balanceOf(address(depositVault));
         uint256 feeRecipientBalanceBeforeDeposit = usdc.balanceOf(feeRecipient);
 
-        uint256 depositFeeAmount = _feeOnTotal(depositAmount, depositFee);
+        uint256 depositFeeAmount = depositVault.exposed_feeOnTotal(depositAmount, depositFee);
         depositVault.deposit(depositAmount, users.alice);
 
         uint256 aliceAssetsAfterDeposit = usdc.balanceOf(users.alice);
@@ -138,7 +125,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         assertEq(vaultAssetsAfterDeposit, vaultAssetsBeforeDeposit + depositAmount);
         assertEq(feeRecipientBalanceAfterDeposit, feeRecipientBalanceBeforeDeposit);
 
-        uint256 redeemFeeAmount = _feeOnTotal(aliceSharesAfterDeposit, withdrawFee);
+        uint256 redeemFeeAmount = depositVault.exposed_feeOnTotal(aliceSharesAfterDeposit, withdrawFee);
         depositVault.requestRedeem(aliceSharesAfterDeposit, users.alice, users.alice);
 
         uint256 aliceAssetsAfterRedeem = usdc.balanceOf(users.alice);
@@ -160,7 +147,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         uint256 vaultAssetsBeforeDeposit = usdc.balanceOf(address(depositVault));
         uint256 feeRecipientBalanceBeforeDeposit = usdc.balanceOf(feeRecipient);
 
-        uint256 depositFeeAmount = _feeOnRaw(depositAmount, depositFee);
+        uint256 depositFeeAmount = depositVault.exposed_feeOnRaw(depositAmount, depositFee);
         uint256 previewMint = depositVault.previewMint(depositAmount);
         depositVault.mint(depositAmount, users.alice);
 
@@ -175,7 +162,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         assertEq(vaultAssetsAfterDeposit, vaultAssetsBeforeDeposit + depositAmount, "3");
         assertEq(feeRecipientBalanceAfterDeposit, feeRecipientBalanceBeforeDeposit + depositFeeAmount, "4");
 
-        uint256 redeemFeeAmount = _feeOnTotal(aliceSharesAfterDeposit, withdrawFee);
+        uint256 redeemFeeAmount = depositVault.exposed_feeOnTotal(aliceSharesAfterDeposit, withdrawFee);
         depositVault.requestRedeem(aliceSharesAfterDeposit, users.alice, users.alice);
 
         uint256 aliceAssetsAfterRedeem = usdc.balanceOf(users.alice);
@@ -191,7 +178,7 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
 
     function test_async_redeem() public {
         vm.startPrank({ msgSender: users.alice });
-        uint256 depositFeeAmount = _feeOnTotal(depositAmount, depositFee);
+        uint256 depositFeeAmount = depositVault.exposed_feeOnTotal(depositAmount, depositFee);
         uint256 netDepositAmount = depositAmount - depositFeeAmount;
 
         uint256 feeRecipientBalance = usdc.balanceOf(feeRecipient);
@@ -199,53 +186,36 @@ contract Deposit_Unit_Concrete_Test is Base_Test {
         depositVault.deposit(depositAmount, users.alice);
 
         moveAssetsFromVault(netDepositAmount);
-        updateUnderlyingBalance(netDepositAmount);
 
         vm.startPrank({ msgSender: users.alice });
         uint256 aliceShares = depositVault.balanceOf(users.alice);
         uint256 totalPendingAssetsBefore = depositVault.totalPendingAssets();
 
-        uint256 redeemFeeAmount = _feeOnTotal(aliceShares, withdrawFee);
+        uint256 redeemFeeAmount = depositVault.exposed_feeOnTotal(aliceShares, withdrawFee);
         depositVault.requestRedeem(aliceShares, users.alice, users.alice);
 
         vm.roll(block.number + 1);
         usdc.transfer(address(depositVault), netDepositAmount);
-        updateUnderlyingBalance(0);
 
         vm.startPrank({ msgSender: users.admin });
         uint256 totalPendingAssetsAfter = depositVault.totalPendingAssets();
-        // check that the total pending assets are accounted for correctly including both the deposit and redeem fees
         assertEq(totalPendingAssetsAfter, totalPendingAssetsBefore + netDepositAmount);
         (uint256 pendingAssets, uint256 pendingShares) = depositVault.pendingRedeemRequest(users.alice);
-        // check that the user pending assets and shares are accounted for correctly including both the deposit and
-        // redeem fees
         assertEq(pendingAssets, netDepositAmount);
         assertEq(pendingShares, aliceShares);
 
         depositVault.fulfillRedeem(users.alice, pendingShares, pendingAssets);
 
-        (uint256 pendingAssetsAfterr, uint256 pendingSharesAfter) = depositVault.pendingRedeemRequest(users.alice);
+        (uint256 pendingAssetsAfterFulfill, uint256 pendingSharesAfter) = depositVault.pendingRedeemRequest(users.alice);
         uint256 feeRecipientBalanceAfter = usdc.balanceOf(feeRecipient);
 
         assertEq(depositVault.totalPendingAssets(), 0);
-        assertEq(pendingAssetsAfterr, 0);
+        assertEq(pendingAssetsAfterFulfill, 0);
         assertEq(pendingSharesAfter, 0);
         assertEq(depositVault.balanceOf(users.alice), 0);
         assertEq(depositVault.totalAssets(), 0);
         assertEq(depositVault.balanceOf(address(depositVault)), 0);
 
         assertEq(feeRecipientBalanceAfter, feeRecipientBalance + redeemFeeAmount + depositFeeAmount);
-    }
-
-    /// @dev Calculates the fees that should be added to an amount `assets` that does not already include fees.
-    /// Used in {IERC4626-mint} and {IERC4626-withdraw} operations.
-    function _feeOnRaw(uint256 assets, uint256 feeBasisPoints) private pure returns (uint256) {
-        return assets.mulDiv(feeBasisPoints, DENOMINATOR, Math.Rounding.Ceil);
-    }
-
-    /// @dev Calculates the fee part of an amount `assets` that already includes fees.
-    /// Used in {IERC4626-deposit} and {IERC4626-redeem} operations.
-    function _feeOnTotal(uint256 assets, uint256 feeBasisPoints) private pure returns (uint256) {
-        return assets.mulDiv(feeBasisPoints, feeBasisPoints + DENOMINATOR, Math.Rounding.Ceil);
     }
 }

@@ -15,7 +15,6 @@ contract Fulfill_Unit_Concrete_Test is Base_Test {
         depositVault.deposit(amount, users.alice);
 
         moveAssetsFromVault(amount);
-        updateUnderlyingBalance(amount);
 
         vm.startPrank({ msgSender: users.alice });
         aliceShares = depositVault.balanceOf(users.alice);
@@ -23,7 +22,6 @@ contract Fulfill_Unit_Concrete_Test is Base_Test {
 
         vm.roll(block.number + 1);
         usdc.transfer(address(depositVault), amount);
-        updateUnderlyingBalance(0);
     }
 
     function test_fulfill_success() public {
@@ -63,7 +61,6 @@ contract Fulfill_Unit_Concrete_Test is Base_Test {
     function test_fulfill_revert_insufficient_assets() public {
         moveAssetsFromVault(amount);
         vm.roll(block.number + 1);
-        updateUnderlyingBalance(amount);
         vm.startPrank({ msgSender: users.admin });
         (uint256 pendingAssets, uint256 pendingShares) = depositVault.pendingRedeemRequest(users.alice);
         vm.expectRevert("ERC20: transfer amount exceeds balance");

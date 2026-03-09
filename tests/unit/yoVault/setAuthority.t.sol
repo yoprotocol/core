@@ -18,9 +18,8 @@ contract IsAuthorized_Unit_Concrete_Test is Base_Test {
         vm.startPrank({ msgSender: users.admin });
 
         MockAuthority(address(authority)).setUserRole(users.bob, 2, true);
-        MockAuthority(address(depositVault.authority())).setRoleCapability(
-            2, address(depositVault), depositVault.setAuthority.selector, true
-        );
+        MockAuthority(address(depositVault.authority()))
+            .setRoleCapability(2, address(depositVault), depositVault.setAuthority.selector, true);
 
         MockAuthority newAuthority = new MockAuthority(users.bob, authority);
         vm.startPrank({ msgSender: users.bob });
